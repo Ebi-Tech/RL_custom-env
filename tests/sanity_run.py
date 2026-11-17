@@ -8,8 +8,10 @@ import numpy as np
 
 from environment import ShopEnv
 from environment.baselines import random_policy, rule_credit_policy, rule_policy
+from environment.config import make_config
 
 SEEDS = range(20)
+TRUST_MARGIN = 0.1
 LOG_SEED = 0
 POLICIES = {
     "random_policy": random_policy,
@@ -99,12 +101,14 @@ def mean_of(episodes, key):
 def run_checks(runs):
     """Print ok or FAILED for each sanity check and return whether all passed."""
     rule_runs = runs["rule_policy"]
+    trust_floor = make_config()["trust"]["min"]
     checks = [
         ("rule_policy mean return is higher than random_policy's",
          mean_of(rule_runs, "return") > mean_of(runs["random_policy"], "return")),
         ("rule_policy mean return is positive", mean_of(rule_runs, "return") > 0),
         ("rule_policy has no bankruptcies", not any(episode["bankrupt"] for episode in rule_runs)),
-        ("rule_policy mean trust over the episode is at least 0.5", mean_of(rule_runs, "mean_trust") >= 0.5),
+        (f"rule_policy mean trust stays above the trust floor + {TRUST_MARGIN}",
+         mean_of(rule_runs, "mean_trust") > trust_floor + TRUST_MARGIN),
         ("rule_policy lost customers per day is below 5", mean_of(rule_runs, "lost_per_day") < 5),
     ]
     for name, episodes in runs.items():

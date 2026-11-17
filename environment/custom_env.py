@@ -50,7 +50,6 @@ RESTOCK_ACTIONS = {
     5: (RICE_BAG, "small_batch"),
     6: (RICE_BAG, "large_batch"),
 }
-SMALL_RESTOCK_FOR_SLOT = {INDOMIE: 1, SOAP: 3, RICE_BAG: 5}
 
 LOW_BAND, NORMAL_BAND, HIGH_BAND = 0, 1, 2
 BAND_NAMES = ("low", "normal", "high")
