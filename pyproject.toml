@@ -4,4 +4,23 @@ version = "0.1.0"
 description = "Mission-based reinforcement learning on a custom Gymnasium environment with TorchRL."
 readme = "README.md"
 requires-python = ">=3.11,<3.12"
-dependencies = []
+dependencies = [
+    "gymnasium==0.29.1",
+    "numpy<2",
+    "tensordict==0.3.2",
+    "torch==2.2.2",
+    "torchrl==0.3.1",
+]
+
+[tool.uv]
+required-environments = [
+    "sys_platform == 'darwin' and platform_machine == 'x86_64'",
+    "sys_platform == 'darwin' and platform_machine == 'arm64'",
+    "sys_platform == 'linux' and platform_machine == 'x86_64'",
+    "sys_platform == 'win32' and platform_machine == 'AMD64'",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.2.0",
+]
