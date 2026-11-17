@@ -1,0 +1,7 @@
+[project]
+name = "divine-ifechukwude-rl-summative"
+version = "0.1.0"
+description = "Mission-based reinforcement learning on a custom Gymnasium environment with TorchRL."
+readme = "README.md"
+requires-python = ">=3.11,<3.12"
+dependencies = []
