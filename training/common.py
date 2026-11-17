@@ -9,7 +9,8 @@ from torchrl.envs import GymWrapper, RewardSum, StepCounter, TransformedEnv
 
 from environment import ACTION_NAMES, ShopEnv
 
-EVAL_SEEDS = range(1000, 1020)
+VAL_SEEDS = range(500, 520)
+TEST_SEEDS = range(1000, 1020)
 EVAL_METRICS = (
     "return", "final_cash", "final_net_worth", "lost_per_day", "trust", "debt_lent", "defaults",
     "invalid_rate", "hold_rate",
@@ -74,8 +75,10 @@ def add_eval_day(stats, reward, info):
     stats["days"] += 1
 
 
-def evaluate_policy(policy_fn, market="default", seeds=EVAL_SEEDS):
-    """Run one episode per held-out seed and return the mean and std of each metric.
+def evaluate_policy(policy_fn, market="default", seeds=TEST_SEEDS):
+    """Run one episode per seed and return the mean and std of each metric.
+
+    Training passes VAL_SEEDS for model selection; TEST_SEEDS are only used after training ends.
 
     The result also holds the bankruptcy count and the share of days each action was chosen,
     so trained agents and the baselines can be compared on exactly the same footing.
@@ -92,11 +95,14 @@ def evaluate_policy(policy_fn, market="default", seeds=EVAL_SEEDS):
     return result
 
 
-def flatten_eval_result(result):
-    """Turn an evaluate_policy result into one flat dict, with one freq_<action> column per action."""
-    flat = {key: value for key, value in result.items() if key != "action_freq"}
+def flatten_eval_result(result, prefix=""):
+    """Turn an evaluate_policy result into one flat dict with prefixed keys and one freq column per action.
+
+    The prefix names the seed set, for example "test_", so every column says where its number came from.
+    """
+    flat = {f"{prefix}{key}": value for key, value in result.items() if key != "action_freq"}
     for name, share in result["action_freq"].items():
-        flat[f"freq_{name}"] = share
+        flat[f"{prefix}freq_{name}"] = share
     return flat
 
 
@@ -126,13 +132,22 @@ def append_row(path, row):
     """
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    rows, header = read_rows(path)
+    header = read_header(path)
     new_columns = [key for key in row if key not in header]
-    if path.exists() and not new_columns:
+    if header and not new_columns:
         with path.open("a", newline="") as file:
-            csv.DictWriter(file, fieldnames=header).writerow(row)
+            csv.DictWriter(file, fieldnames=header, restval="").writerow(row)
         return
+    rows, _ = read_rows(path)
     write_rows(path, header + new_columns, rows + [row])
+
+
+def read_header(path):
+    """Return only the header of a CSV file, or an empty list when it does not exist or is empty."""
+    if not path.exists():
+        return []
+    with path.open(newline="") as file:
+        return next(csv.reader(file), [])
 
 
 def read_rows(path):

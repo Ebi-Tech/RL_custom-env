@@ -5,6 +5,7 @@ import pytest
 from gymnasium.utils.env_checker import check_env
 
 from environment import ENV_ID, ShopEnv
+from environment.baselines import rule_policy
 from environment.config import make_config
 from environment.custom_env import (
     CHASE_DEBTS,
@@ -21,6 +22,9 @@ from environment.custom_env import (
 
 SEED = 7
 RESTOCK_INDOMIE_SMALL = 1
+FROZEN_RULE_SEED = 0
+FROZEN_RULE_RETURN = 87.03042346529378
+FROZEN_RULE_NET_WORTH = 1447904.2346529379
 
 
 def make_quiet_env(seed=SEED):
@@ -214,6 +218,20 @@ def test_negative_cash_terminates():
     assert terminated
     assert not truncated
     assert any(event.startswith("Bankrupt") for event in info["events"])
+
+
+def test_rule_policy_seed_0_is_frozen():
+    """rule_policy on seed 0 gives exactly the frozen return and net worth, so any change to the dynamics shows up."""
+    env = ShopEnv()
+    obs, _ = env.reset(seed=FROZEN_RULE_SEED)
+    total_return = 0.0
+    done = False
+    while not done:
+        obs, reward, terminated, truncated, _ = env.step(rule_policy(obs, env))
+        total_return += reward
+        done = terminated or truncated
+    assert total_return == FROZEN_RULE_RETURN
+    assert env.net_worth() == FROZEN_RULE_NET_WORTH
 
 
 def test_gymnasium_make_works():

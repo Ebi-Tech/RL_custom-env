@@ -72,7 +72,8 @@ class ShopEnv(gymnasium.Env):
         self.products = self.config["products"]
         self.purchase_types = self.config["purchases"]
         shares = np.array([purchase["share"] for purchase in self.purchase_types], dtype=np.float64)
-        self.purchase_shares = shares / shares.sum()
+        purchase_cdf = (shares / shares.sum()).cumsum()
+        self.purchase_cdf = purchase_cdf / purchase_cdf[-1]
         self.unit_costs = np.array([product["cost"] for product in self.products], dtype=np.float64)
         self.stock_caps = np.array([product["cap"] for product in self.products], dtype=np.float64)
         self.sales_norms = np.array([product["sales_norm"] for product in self.products], dtype=np.float64)
@@ -267,7 +268,7 @@ class ShopEnv(gymnasium.Env):
     def _change_trust(self, delta):
         """Add a change to trust and keep it inside the configured range."""
         trust_config = self.config["trust"]
-        self.trust = float(np.clip(self.trust + delta, trust_config["min"], trust_config["max"]))
+        self.trust = float(min(max(self.trust + delta, trust_config["min"]), trust_config["max"]))
 
     def _deliver(self, order, today):
         """Put yesterday's order on the shelf and hold today's order until tomorrow."""
@@ -307,7 +308,7 @@ class ShopEnv(gymnasium.Env):
 
     def _serve_customer(self, today):
         """Handle one customer from choosing a purchase through stock, credit, price and jara."""
-        purchase = self.purchase_types[self.np_random.choice(len(self.purchase_types), p=self.purchase_shares)]
+        purchase = self.purchase_types[self._draw_purchase_index()]
         quantity = int(self.np_random.integers(purchase["min_qty"], purchase["max_qty"] + 1))
         slot = purchase["slot"]
         units = quantity * purchase["units_per_item"]
@@ -326,6 +327,14 @@ class ShopEnv(gymnasium.Env):
         self._complete_sale(slot, units, price, on_credit, today)
         if purchase["jara"]:
             self._handle_jara(today)
+
+    def _draw_purchase_index(self):
+        """Pick a purchase type by its share, using the same single uniform draw as Generator.choice.
+
+        Generator.choice with probabilities does exactly this cumulative-share search, but it
+        revalidates the probabilities on every call, which made it the slowest part of a step.
+        """
+        return int(self.purchase_cdf.searchsorted(self.np_random.random(), side="right"))
 
     def _lose_customer(self, today):
         """Count a customer lost to an empty shelf and lower trust."""

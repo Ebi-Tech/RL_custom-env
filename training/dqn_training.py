@@ -20,10 +20,12 @@ from torchrl.objectives import DQNLoss, HardUpdate, SoftUpdate
 
 from environment.custom_env import ACTION_NAMES, OBS_SIZE
 from training.common import (
-    EVAL_SEEDS,
+    TEST_SEEDS,
+    VAL_SEEDS,
     append_row,
     evaluate_policy,
     greedy_fn_from_module,
+    load_checkpoint,
     make_env,
     read_rows,
     save_checkpoint,
@@ -34,10 +36,12 @@ from training.experiments import DQN_EXPERIMENTS, find_experiment
 ALGO = "dqn"
 ACTIVATIONS = {"relu": nn.ReLU, "tanh": nn.Tanh}
 TARGET_UPDATES = ("hard", "soft")
+SUMMARY_TEST_METRICS = ("net_worth", "invalid_rate", "hold_rate", "trust", "lost_per_day")
+SUMMARY_METRIC_KEYS = {"net_worth": "final_net_worth"}
 
 DEFAULT_DQN_CONFIG = {
     "market": "default",
-    "total_frames": 150000,
+    "total_frames": 200000,
     "frames_per_batch": 90,
     "init_random_frames": 2000,
     "buffer_size": 50000,
@@ -188,36 +192,53 @@ def mean_or_empty(values):
     return sum(values) / len(values) if values else ""
 
 
-def run_evaluation(agent, config, tracker, paths, eval_seeds):
-    """Evaluate the greedy policy, log it, save the best model and print one progress line."""
+def run_validation(agent, config, tracker, paths, val_seeds):
+    """Evaluate the greedy policy on the validation seeds, log it, keep the best model and print progress."""
     policy_fn = greedy_fn_from_module(agent["value_net"], "q")
-    result = evaluate_policy(policy_fn, market=config["market"], seeds=eval_seeds)
+    result = evaluate_policy(policy_fn, market=config["market"], seeds=val_seeds)
     elapsed = time.time() - tracker["start_time"]
     append_row(paths["eval"], {
         "frames": tracker["frames"],
-        "eval_return_mean": result["return_mean"],
-        "eval_return_std": result["return_std"],
-        "final_cash_mean": result["final_cash_mean"],
-        "net_worth_mean": result["final_net_worth_mean"],
-        "lost_per_day_mean": result["lost_per_day_mean"],
-        "trust_mean": result["trust_mean"],
-        "defaults_mean": result["defaults_mean"],
-        "invalid_rate_mean": result["invalid_rate_mean"],
-        "hold_rate_mean": result["hold_rate_mean"],
+        "val_return_mean": result["return_mean"],
+        "val_return_std": result["return_std"],
+        "val_final_cash_mean": result["final_cash_mean"],
+        "val_net_worth_mean": result["final_net_worth_mean"],
+        "val_lost_per_day_mean": result["lost_per_day_mean"],
+        "val_trust_mean": result["trust_mean"],
+        "val_defaults_mean": result["defaults_mean"],
+        "val_invalid_rate_mean": result["invalid_rate_mean"],
+        "val_hold_rate_mean": result["hold_rate_mean"],
     })
-    tracker["last_eval"] = result
-    tracker["last_eval_frames"] = tracker["frames"]
-    if tracker["best"] is None or result["return_mean"] > tracker["best"]["return_mean"]:
-        tracker["best"] = result
+    tracker["last_val"] = result
+    tracker["last_val_frames"] = tracker["frames"]
+    if tracker["best_val"] is None or result["return_mean"] > tracker["best_val"]["return_mean"]:
+        tracker["best_val"] = result
+        tracker["best_val_frames"] = tracker["frames"]
         save_checkpoint(paths["best"], agent["value_net"], config, checkpoint_extra(result, tracker, elapsed))
-    print(f"frames {tracker['frames']:>7}  eval return {result['return_mean']:>8.2f}  "
+    print(f"frames {tracker['frames']:>7}  val return {result['return_mean']:>8.2f}  "
           f"epsilon {float(agent['exploration'].eps):.3f}  {elapsed:>7.1f}s")
     return result
 
 
-def checkpoint_extra(result, tracker, elapsed):
+def checkpoint_extra(val_result, tracker, elapsed):
     """Return the extra info stored next to the weights in a checkpoint."""
-    return {"eval": result, "frames": tracker["frames"], "wall_time_s": elapsed}
+    return {"val_eval": val_result, "frames": tracker["frames"], "wall_time_s": elapsed}
+
+
+def run_test_evaluation(paths, value_net, config, test_seeds):
+    """Evaluate the final network and the best checkpoint on the test seeds, which training never saw."""
+    best_net, _ = load_checkpoint(paths["best"], build_value_net)
+    final_result = evaluate_policy(greedy_fn_from_module(value_net, "q"), config["market"], test_seeds)
+    best_result = evaluate_policy(greedy_fn_from_module(best_net, "q"), config["market"], test_seeds)
+    return {"final": final_result, "best": best_result}
+
+
+def summary_test_columns(prefix, result):
+    """Return the summary columns of one test evaluation, every name starting with its prefix."""
+    columns = {f"{prefix}return_mean": result["return_mean"], f"{prefix}return_std": result["return_std"]}
+    for metric in SUMMARY_TEST_METRICS:
+        columns[f"{prefix}{metric}_mean"] = result[f"{SUMMARY_METRIC_KEYS.get(metric, metric)}_mean"]
+    return columns
 
 
 def experiment_paths(exp_id, log_dir, model_dir):
@@ -238,28 +259,29 @@ def remove_old_logs(paths):
         paths[key].unlink(missing_ok=True)
 
 
-def summary_row(exp_id, description, config, final, tracker, elapsed):
+def summary_row(exp_id, description, config, tracker, test_results, elapsed):
     """Build the one-line summary of a finished experiment for logs/summary.csv."""
     row = {"algo": ALGO, "exp_id": exp_id, "description": description}
     row.update({key: str(value) if isinstance(value, list) else value for key, value in config.items()})
     row.update({
-        "final_eval_return_mean": final["return_mean"],
-        "final_eval_return_std": final["return_std"],
-        "net_worth_mean": final["final_net_worth_mean"],
-        "invalid_rate_mean": final["invalid_rate_mean"],
-        "best_eval_return": tracker["best"]["return_mean"],
         "frames": tracker["frames"],
         "wall_time_s": round(elapsed, 1),
+        "val_final_return": tracker["last_val"]["return_mean"],
+        "val_best_return": tracker["best_val"]["return_mean"],
+        "val_best_frames": tracker["best_val_frames"],
     })
+    row.update(summary_test_columns("test_final_", test_results["final"]))
+    row.update(summary_test_columns("test_best_", test_results["best"]))
     return row
 
 
-def run_experiment(exp_id, overrides=None, log_dir="logs", model_dir="models", eval_seeds=EVAL_SEEDS,
-                   description=""):
+def run_experiment(exp_id, overrides=None, log_dir="logs", model_dir="models", val_seeds=VAL_SEEDS,
+                   test_seeds=TEST_SEEDS, description=""):
     """Train one DQN agent with the defaults plus overrides, log everything and save the models.
 
-    Returns a dict with the trained value network, the final eval result and the file paths,
-    so a sweep can call it many times and tests can inspect what it wrote.
+    Validation seeds pick the best checkpoint during training; after training the final and the
+    best networks are both scored on the test seeds. Returns the trained network, the results and
+    the file paths, so a sweep can call it many times and tests can inspect what it wrote.
     """
     config = merge_config(overrides)
     set_seed(config["seed"])
@@ -269,8 +291,8 @@ def run_experiment(exp_id, overrides=None, log_dir="logs", model_dir="models", e
     agent = build_agent(config, env)
     collector = build_collector(config, env, agent["policy"])
     buffer = build_buffer(config)
-    tracker = {"frames": 0, "episodes": 0, "losses": [], "q_values": [], "best": None,
-               "last_eval": None, "last_eval_frames": None,
+    tracker = {"frames": 0, "episodes": 0, "losses": [], "q_values": [], "best_val": None,
+               "best_val_frames": None, "last_val": None, "last_val_frames": None,
                "start_time": time.time(), "next_eval": config["eval_every_frames"]}
     for batch in collector:
         tracker["frames"] += batch.numel()
@@ -280,18 +302,21 @@ def run_experiment(exp_id, overrides=None, log_dir="logs", model_dir="models", e
         agent["exploration"].step(batch.numel())
         log_finished_episodes(batch, tracker, agent, paths)
         if tracker["frames"] >= tracker["next_eval"]:
-            run_evaluation(agent, config, tracker, paths, eval_seeds)
+            run_validation(agent, config, tracker, paths, val_seeds)
             tracker["next_eval"] += config["eval_every_frames"]
     collector.shutdown()
-    if tracker["last_eval_frames"] == tracker["frames"]:
-        final = tracker["last_eval"]
-    else:
-        final = run_evaluation(agent, config, tracker, paths, eval_seeds)
+    if tracker["last_val_frames"] != tracker["frames"]:
+        run_validation(agent, config, tracker, paths, val_seeds)
     elapsed = time.time() - tracker["start_time"]
-    save_checkpoint(paths["final"], agent["value_net"], config, checkpoint_extra(final, tracker, elapsed))
-    append_row(paths["summary"], summary_row(exp_id, description, config, final, tracker, elapsed))
-    return {"value_net": agent["value_net"], "final_eval": final, "best_eval": tracker["best"],
-            "paths": paths, "frames": tracker["frames"], "wall_time_s": elapsed}
+    save_checkpoint(paths["final"], agent["value_net"], config,
+                    checkpoint_extra(tracker["last_val"], tracker, elapsed))
+    test_results = run_test_evaluation(paths, agent["value_net"], config, test_seeds)
+    elapsed = time.time() - tracker["start_time"]
+    append_row(paths["summary"], summary_row(exp_id, description, config, tracker, test_results, elapsed))
+    print(f"test return: final {test_results['final']['return_mean']:.2f}, "
+          f"best checkpoint {test_results['best']['return_mean']:.2f}")
+    return {"value_net": agent["value_net"], "val_final": tracker["last_val"], "val_best": tracker["best_val"],
+            "test": test_results, "paths": paths, "frames": tracker["frames"], "wall_time_s": elapsed}
 
 
 def parse_args():
@@ -340,8 +365,7 @@ def run_one(experiment, extra_overrides):
     print(f"\n=== {experiment['exp_id']}: {experiment['description']} ===")
     result = run_experiment(experiment["exp_id"], overrides, description=experiment["description"])
     print(f"done: {result['frames']} frames in {result['wall_time_s']:.1f}s, "
-          f"final eval return {result['final_eval']['return_mean']:.2f}, "
-          f"best {result['best_eval']['return_mean']:.2f}")
+          f"val return final {result['val_final']['return_mean']:.2f}, best {result['val_best']['return_mean']:.2f}")
 
 
 def main():
