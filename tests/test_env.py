@@ -82,9 +82,10 @@ def test_restock_pays_now_and_delivers_tomorrow():
     batch_cost = product["small_batch"] * product["cost"]
     cash_before = env.cash
     stock_before = env.stock[INDOMIE]
-    env.step(RESTOCK_INDOMIE_SMALL)
+    _, _, _, _, info = env.step(RESTOCK_INDOMIE_SMALL)
     assert env.pending[INDOMIE] == product["small_batch"]
-    assert env.cash == pytest.approx(cash_before - batch_cost - env.config["fixed_cost"])
+    daily_costs = env.config["fixed_cost"] + info["holding_cost"]
+    assert env.cash == pytest.approx(cash_before - batch_cost - daily_costs)
     env.step(HOLD)
     assert env.pending[INDOMIE] == 0
     assert env.stock[INDOMIE] == stock_before + product["small_batch"]
@@ -93,11 +94,12 @@ def test_restock_pays_now_and_delivers_tomorrow():
 def test_open_bag_moves_rice_to_loose():
     """Opening a bag moves one bag from slot 2 into 36 mudu in slot 3."""
     env = make_quiet_env()
+    env.stock[LOOSE_RICE] = 0.0
     bags_before = env.stock[RICE_BAG]
     loose_before = env.stock[LOOSE_RICE]
-    env.step(OPEN_BAG)
+    _, _, _, _, info = env.step(OPEN_BAG)
     assert env.stock[RICE_BAG] == bags_before - 1
-    assert env.stock[LOOSE_RICE] == loose_before + env.config["mudu_per_bag"]
+    assert env.stock[LOOSE_RICE] == pytest.approx(loose_before + env.config["mudu_per_bag"] - info["waste"])
 
 
 def test_price_band_moves_and_stays_in_range():
@@ -128,19 +130,68 @@ def test_chase_lowers_trust():
 
 
 def test_invalid_restock_is_penalised_and_changes_nothing():
-    """A restock without enough cash gets exactly the invalid penalty and leaves stock untouched."""
+    """A restock without enough cash gets exactly the invalid penalty and leaves stock as holding would."""
     holding_env = make_quiet_env()
     invalid_env = make_quiet_env()
     holding_env.cash = 0.0
     invalid_env.cash = 0.0
-    stock_before = invalid_env.stock.copy()
     _, hold_reward, _, _, _ = holding_env.step(HOLD)
     _, invalid_reward, _, _, info = invalid_env.step(RESTOCK_INDOMIE_SMALL)
     penalty = invalid_env.config["reward"]["invalid_action_penalty"]
     assert info["invalid_action"]
     assert invalid_reward == pytest.approx(hold_reward - penalty)
-    np.testing.assert_array_equal(invalid_env.stock, stock_before)
+    np.testing.assert_array_equal(invalid_env.stock, holding_env.stock)
     assert invalid_env.pending.sum() == 0
+
+
+def test_restock_over_capacity_is_invalid_and_keeps_cash():
+    """A restock that would overfill storage is invalid, places no order and spends nothing on it."""
+    holding_env = make_quiet_env()
+    invalid_env = make_quiet_env()
+    product = invalid_env.products[INDOMIE]
+    nearly_full = product["cap"] - product["small_batch"] + 1
+    holding_env.stock[INDOMIE] = nearly_full
+    invalid_env.stock[INDOMIE] = nearly_full
+    holding_env.step(HOLD)
+    _, _, _, _, info = invalid_env.step(RESTOCK_INDOMIE_SMALL)
+    assert info["invalid_action"]
+    assert any("Not enough space" in event for event in info["events"])
+    assert invalid_env.pending.sum() == 0
+    assert invalid_env.cash == pytest.approx(holding_env.cash)
+
+
+def test_open_bag_over_capacity_is_invalid():
+    """Opening a bag when the loose rice would overflow its storage is invalid and moves nothing."""
+    env = make_quiet_env()
+    env.stock[LOOSE_RICE] = env.products[LOOSE_RICE]["cap"]
+    bags_before = env.stock[RICE_BAG]
+    _, _, _, _, info = env.step(OPEN_BAG)
+    assert info["invalid_action"]
+    assert env.stock[RICE_BAG] == bags_before
+
+
+def test_holding_cost_lowers_cash_without_customers():
+    """With no customers, cash falls by the fixed cost plus the holding cost on the stock at cost."""
+    env = make_quiet_env()
+    cash_before = env.cash
+    _, _, _, _, info = env.step(HOLD)
+    expected_holding = env.config["holding_cost_rate"] * float(np.dot(env.stock, env.unit_costs))
+    assert info["holding_cost"] > 0
+    assert info["holding_cost"] == pytest.approx(expected_holding)
+    assert env.cash == pytest.approx(cash_before - env.config["fixed_cost"] - expected_holding)
+
+
+def test_loose_rice_shrinks_from_waste_without_customers():
+    """With no customers, loose rice drops by the waste rate, rounded down to the waste step."""
+    env = make_quiet_env()
+    loose_before = 40.0
+    env.stock[LOOSE_RICE] = loose_before
+    _, _, _, _, info = env.step(HOLD)
+    step = env.config["loose_rice_waste_step"]
+    expected_waste = np.floor(env.config["loose_rice_waste_rate"] * loose_before / step) * step
+    assert expected_waste > 0
+    assert info["waste"] == pytest.approx(expected_waste)
+    assert env.stock[LOOSE_RICE] == pytest.approx(loose_before - expected_waste)
 
 
 def test_truncates_exactly_at_day_90_when_holding():

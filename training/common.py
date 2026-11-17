@@ -10,7 +10,11 @@ from torchrl.envs import GymWrapper, RewardSum, StepCounter, TransformedEnv
 from environment import ACTION_NAMES, ShopEnv
 
 EVAL_SEEDS = range(1000, 1020)
-EVAL_METRICS = ("return", "final_cash", "lost_per_day", "trust", "debt_lent", "defaults")
+EVAL_METRICS = (
+    "return", "final_cash", "final_net_worth", "lost_per_day", "trust", "debt_lent", "defaults",
+    "invalid_rate", "hold_rate",
+)
+HOLD_ACTION = ACTION_NAMES.index("hold")
 POLICY_KINDS = ("q", "logits")
 
 
@@ -35,7 +39,8 @@ def run_eval_episode(policy_fn, market, seed):
     env = ShopEnv(market=market)
     obs, info = env.reset(seed=seed)
     env.action_space.seed(seed)
-    stats = {"return": 0.0, "lost": 0, "trust_sum": 0.0, "debt_lent": 0.0, "defaults": 0.0, "days": 0}
+    stats = {"return": 0.0, "lost": 0, "trust_sum": 0.0, "debt_lent": 0.0, "defaults": 0.0,
+             "invalid": 0, "days": 0}
     action_counts = np.zeros(len(ACTION_NAMES))
     terminated = truncated = False
     while not (terminated or truncated):
@@ -46,10 +51,13 @@ def run_eval_episode(policy_fn, market, seed):
     return {
         "return": stats["return"],
         "final_cash": info["cash"],
+        "final_net_worth": env.net_worth(),
         "lost_per_day": stats["lost"] / stats["days"],
         "trust": stats["trust_sum"] / stats["days"],
         "debt_lent": stats["debt_lent"],
         "defaults": stats["defaults"],
+        "invalid_rate": stats["invalid"] / stats["days"],
+        "hold_rate": action_counts[HOLD_ACTION] / stats["days"],
         "bankrupt": bool(terminated),
         "action_counts": action_counts,
     }
@@ -62,6 +70,7 @@ def add_eval_day(stats, reward, info):
     stats["trust_sum"] += info["trust"]
     stats["debt_lent"] += info["credit_given"]
     stats["defaults"] += info["defaults"]
+    stats["invalid"] += int(info["invalid_action"])
     stats["days"] += 1
 
 

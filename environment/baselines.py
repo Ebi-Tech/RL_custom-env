@@ -60,18 +60,22 @@ def shopkeeper_action(shop, credit_open, chase_above):
 
 
 def choose_restock(shop, rules):
-    """Return a restock action for the first product below its reorder point that cash can cover.
+    """Return a restock action for the first product below its reorder point that fits and cash can cover.
 
-    The large batch is used when cash after paying stays above a safety buffer, otherwise the
-    small batch when it is affordable, otherwise the next product is checked.
+    The large batch is used when it fits in storage and cash after paying stays above a safety
+    buffer, otherwise the small batch when it fits and is affordable, otherwise the next product
+    is checked.
     """
     min_cash_after = rules["large_batch_min_cash_after"] * shop.config["money_scale"]
     for slot, reorder_point in enumerate(rules["reorder_points"]):
-        if shop.stock[slot] + shop.pending[slot] >= reorder_point:
+        on_hand = shop.stock[slot] + shop.pending[slot]
+        if on_hand >= reorder_point:
             continue
         product = shop.products[slot]
-        if shop.cash - product["large_batch"] * product["cost"] >= min_cash_after:
+        large_fits = on_hand + product["large_batch"] <= product["cap"]
+        if large_fits and shop.cash - product["large_batch"] * product["cost"] >= min_cash_after:
             return RESTOCK_ACTION_FOR[(slot, "large_batch")]
-        if shop.cash >= product["small_batch"] * product["cost"]:
+        small_fits = on_hand + product["small_batch"] <= product["cap"]
+        if small_fits and shop.cash >= product["small_batch"] * product["cost"]:
             return RESTOCK_ACTION_FOR[(slot, "small_batch")]
     return None

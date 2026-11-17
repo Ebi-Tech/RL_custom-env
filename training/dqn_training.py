@@ -1,6 +1,8 @@
 """DQN training for the Beyond Sale Shop environment with TorchRL 0.3.1.
 
-Run with: uv run python -m training.dqn_training --exp-id dqn_smoke --total-frames 20000
+Run one sweep entry:  uv run python -m training.dqn_training --exp-id dqn_03
+Run the sweep:        uv run python -m training.dqn_training --sweep [--only dqn_02,dqn_05] [--skip-done]
+Ad hoc run:           uv run python -m training.dqn_training --exp-id my_test --total-frames 20000
 """
 import argparse
 import copy
@@ -23,9 +25,11 @@ from training.common import (
     evaluate_policy,
     greedy_fn_from_module,
     make_env,
+    read_rows,
     save_checkpoint,
     set_seed,
 )
+from training.experiments import DQN_EXPERIMENTS, find_experiment
 
 ALGO = "dqn"
 ACTIVATIONS = {"relu": nn.ReLU, "tanh": nn.Tanh}
@@ -33,7 +37,7 @@ TARGET_UPDATES = ("hard", "soft")
 
 DEFAULT_DQN_CONFIG = {
     "market": "default",
-    "total_frames": 50000,
+    "total_frames": 150000,
     "frames_per_batch": 90,
     "init_random_frames": 2000,
     "buffer_size": 50000,
@@ -194,9 +198,12 @@ def run_evaluation(agent, config, tracker, paths, eval_seeds):
         "eval_return_mean": result["return_mean"],
         "eval_return_std": result["return_std"],
         "final_cash_mean": result["final_cash_mean"],
+        "net_worth_mean": result["final_net_worth_mean"],
         "lost_per_day_mean": result["lost_per_day_mean"],
         "trust_mean": result["trust_mean"],
         "defaults_mean": result["defaults_mean"],
+        "invalid_rate_mean": result["invalid_rate_mean"],
+        "hold_rate_mean": result["hold_rate_mean"],
     })
     tracker["last_eval"] = result
     tracker["last_eval_frames"] = tracker["frames"]
@@ -231,13 +238,15 @@ def remove_old_logs(paths):
         paths[key].unlink(missing_ok=True)
 
 
-def summary_row(exp_id, config, final, tracker, elapsed):
+def summary_row(exp_id, description, config, final, tracker, elapsed):
     """Build the one-line summary of a finished experiment for logs/summary.csv."""
-    row = {"algo": ALGO, "exp_id": exp_id}
+    row = {"algo": ALGO, "exp_id": exp_id, "description": description}
     row.update({key: str(value) if isinstance(value, list) else value for key, value in config.items()})
     row.update({
         "final_eval_return_mean": final["return_mean"],
         "final_eval_return_std": final["return_std"],
+        "net_worth_mean": final["final_net_worth_mean"],
+        "invalid_rate_mean": final["invalid_rate_mean"],
         "best_eval_return": tracker["best"]["return_mean"],
         "frames": tracker["frames"],
         "wall_time_s": round(elapsed, 1),
@@ -245,7 +254,8 @@ def summary_row(exp_id, config, final, tracker, elapsed):
     return row
 
 
-def run_experiment(exp_id, overrides=None, log_dir="logs", model_dir="models", eval_seeds=EVAL_SEEDS):
+def run_experiment(exp_id, overrides=None, log_dir="logs", model_dir="models", eval_seeds=EVAL_SEEDS,
+                   description=""):
     """Train one DQN agent with the defaults plus overrides, log everything and save the models.
 
     Returns a dict with the trained value network, the final eval result and the file paths,
@@ -279,30 +289,72 @@ def run_experiment(exp_id, overrides=None, log_dir="logs", model_dir="models", e
         final = run_evaluation(agent, config, tracker, paths, eval_seeds)
     elapsed = time.time() - tracker["start_time"]
     save_checkpoint(paths["final"], agent["value_net"], config, checkpoint_extra(final, tracker, elapsed))
-    append_row(paths["summary"], summary_row(exp_id, config, final, tracker, elapsed))
+    append_row(paths["summary"], summary_row(exp_id, description, config, final, tracker, elapsed))
     return {"value_net": agent["value_net"], "final_eval": final, "best_eval": tracker["best"],
             "paths": paths, "frames": tracker["frames"], "wall_time_s": elapsed}
 
 
 def parse_args():
-    """Read the command line options for a single DQN run."""
+    """Read the command line options for one run, a full sweep or a subset of the sweep."""
     parser = argparse.ArgumentParser(description="Train DQN on the Beyond Sale Shop environment.")
-    parser.add_argument("--exp-id", required=True)
+    target = parser.add_mutually_exclusive_group(required=True)
+    target.add_argument("--exp-id", help="a sweep id such as dqn_03, or any new id for an ad hoc run")
+    target.add_argument("--sweep", action="store_true", help="run every experiment in DQN_EXPERIMENTS")
+    parser.add_argument("--only", help="comma separated sweep ids to run, used with --sweep")
+    parser.add_argument("--skip-done", action="store_true", help="skip ids that already have a summary row")
     parser.add_argument("--total-frames", type=int)
     parser.add_argument("--market", choices=["default", "harsh", "price_scale"])
     parser.add_argument("--seed", type=int)
     return parser.parse_args()
 
 
-def main():
-    """Run one DQN experiment from the command line options."""
-    args = parse_args()
+def cli_overrides(args):
+    """Return the config overrides given directly on the command line."""
     overrides = {"total_frames": args.total_frames, "market": args.market, "seed": args.seed}
-    overrides = {key: value for key, value in overrides.items() if value is not None}
-    result = run_experiment(args.exp_id, overrides)
+    return {key: value for key, value in overrides.items() if value is not None}
+
+
+def selected_experiments(args):
+    """Return the experiments to run: one by id, the whole sweep, or the --only subset of it."""
+    if args.exp_id:
+        known = find_experiment(args.exp_id)
+        return [known or {"exp_id": args.exp_id, "description": "ad hoc run", "overrides": {}}]
+    if not args.only:
+        return list(DQN_EXPERIMENTS)
+    wanted = [exp_id.strip() for exp_id in args.only.split(",") if exp_id.strip()]
+    unknown = [exp_id for exp_id in wanted if find_experiment(exp_id) is None]
+    if unknown:
+        raise SystemExit(f"Unknown experiment ids: {unknown}")
+    return [find_experiment(exp_id) for exp_id in wanted]
+
+
+def finished_exp_ids(log_dir="logs"):
+    """Return the DQN exp_ids that already have a row in summary.csv."""
+    rows, _ = read_rows(Path(log_dir) / "summary.csv")
+    return {row["exp_id"] for row in rows if row.get("algo") == ALGO}
+
+
+def run_one(experiment, extra_overrides):
+    """Run one experiment entry with any command line overrides on top and print its result."""
+    overrides = {**experiment["overrides"], **extra_overrides}
+    print(f"\n=== {experiment['exp_id']}: {experiment['description']} ===")
+    result = run_experiment(experiment["exp_id"], overrides, description=experiment["description"])
     print(f"done: {result['frames']} frames in {result['wall_time_s']:.1f}s, "
           f"final eval return {result['final_eval']['return_mean']:.2f}, "
           f"best {result['best_eval']['return_mean']:.2f}")
+
+
+def main():
+    """Run the experiments chosen on the command line, skipping finished ones when asked."""
+    args = parse_args()
+    if args.only and not args.sweep:
+        raise SystemExit("--only needs --sweep")
+    done = finished_exp_ids() if args.skip_done else set()
+    for experiment in selected_experiments(args):
+        if experiment["exp_id"] in done:
+            print(f"skipping {experiment['exp_id']}, already in summary.csv")
+            continue
+        run_one(experiment, cli_overrides(args))
 
 
 if __name__ == "__main__":

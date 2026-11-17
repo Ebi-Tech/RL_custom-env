@@ -1,6 +1,7 @@
 """All tunable numbers for the Beyond Sale Shop environment, plus the market variants.
 
 Money values are placeholder simulation values, to be calibrated later with real shop data.
+Each product's cap is both its storage capacity (stock plus pending) and its observation normaliser.
 """
 import copy
 
@@ -15,6 +16,9 @@ BASE_CONFIG = {
     "money_scale": 1.0,
     "start_cash": 200000,
     "fixed_cost": 3000,
+    "holding_cost_rate": 0.001,
+    "loose_rice_waste_rate": 0.005,
+    "loose_rice_waste_step": 0.1,
     "start_stock_jitter": (0.8, 1.2),
     "mudu_per_bag": 36,
     "calendar": {

@@ -4,6 +4,7 @@ One step is one trading day and one episode is 90 days. The agent suggests the o
 decision and must protect the shop's cash while handling haggling, customer credit, debt
 defaults and stock.
 """
+import math
 from collections import deque
 
 import gymnasium
@@ -104,7 +105,9 @@ class ShopEnv(gymnasium.Env):
         order = self._apply_action(action, today)
         self._deliver(order, today)
         self._serve_customers(today)
+        self._waste_loose_rice(today)
         self._settle_debts(today)
+        self._pay_holding_cost(today)
         self.cash -= self.config["fixed_cost"]
         self._drift_trust()
         self._close_day(today)
@@ -114,6 +117,11 @@ class ShopEnv(gymnasium.Env):
     def total_debt(self):
         """Return the full amount customers still owe the shop."""
         return float(sum(entry["amount"] for entry in self.debts))
+
+    def net_worth(self):
+        """Return cash plus stock and pending stock at cost plus the expected recovery of outstanding debt."""
+        debt_weight = self.config["reward"]["final_debt_weight"]
+        return self._wealth() + debt_weight * self.total_debt()
 
     def debt_by_age(self):
         """Split outstanding debt into recent and old amounts, since old debt is the risky part."""
@@ -180,6 +188,8 @@ class ShopEnv(gymnasium.Env):
             "credit_given": 0.0,
             "repayments": 0.0,
             "defaults": 0.0,
+            "waste": 0.0,
+            "holding_cost": 0.0,
             "profit_today": 0.0,
             "events": [],
         }
@@ -209,6 +219,9 @@ class ShopEnv(gymnasium.Env):
         product = self.products[slot]
         quantity = product[batch_key]
         cost = quantity * product["cost"]
+        if self.stock[slot] + self.pending[slot] + quantity > self.stock_caps[slot]:
+            self._mark_invalid(today, f"Not enough space for {quantity} more {product['label']}")
+            return
         if self.cash < cost:
             self._mark_invalid(today, f"cannot afford {quantity} {product['label']} ({cost:.0f})")
             return
@@ -222,6 +235,9 @@ class ShopEnv(gymnasium.Env):
             self._mark_invalid(today, "no rice bag to open")
             return
         mudu = self.config["mudu_per_bag"]
+        if self.stock[LOOSE_RICE] + mudu > self.stock_caps[LOOSE_RICE]:
+            self._mark_invalid(today, f"Not enough space for {mudu} more mudu of loose rice")
+            return
         self.stock[RICE_BAG] -= 1
         self.stock[LOOSE_RICE] += mudu
         today["events"].append(f"Opened a rice bag into {mudu} mudu")
@@ -429,6 +445,23 @@ class ShopEnv(gymnasium.Env):
         if age > debt["old_debt_age"] and self.np_random.random() < debt["default_prob"]:
             return "defaulted"
         return "open"
+
+    def _waste_loose_rice(self, today):
+        """Lose a small share of open loose rice each day, rounded down to the waste step, as spoilage."""
+        step = self.config["loose_rice_waste_step"]
+        raw_waste = self.config["loose_rice_waste_rate"] * self.stock[LOOSE_RICE]
+        waste = round(math.floor(round(raw_waste / step, 6)) * step, 6)
+        if waste <= 0:
+            return
+        self.stock[LOOSE_RICE] = round(self.stock[LOOSE_RICE] - waste, 6)
+        today["waste"] = waste
+        today["events"].append(f"Lost {waste:.1f} mudu of loose rice to waste")
+
+    def _pay_holding_cost(self, today):
+        """Pay a daily cost proportional to the stock on the shelf, so hoarding stock is not free."""
+        holding_cost = self.config["holding_cost_rate"] * float(np.dot(self.stock, self.unit_costs))
+        self.cash -= holding_cost
+        today["holding_cost"] = holding_cost
 
     def _drift_trust(self):
         """Move trust a fixed share of the gap toward its long run level, so shocks fade over time."""
