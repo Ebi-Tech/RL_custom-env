@@ -87,7 +87,15 @@ def evaluate_policy(policy_fn, market="default", seeds=TEST_SEEDS):
     The result also holds the bankruptcy count and the share of days each action was chosen,
     so trained agents and the baselines can be compared on exactly the same footing.
     """
-    episodes = [run_eval_episode(policy_fn, market, seed) for seed in seeds]
+    return evaluate_seeded_policy(lambda seed: policy_fn, market, seeds)
+
+
+def evaluate_seeded_policy(make_policy_fn, market="default", seeds=TEST_SEEDS):
+    """Like evaluate_policy, but builds a fresh policy_fn for each seed with make_policy_fn(seed).
+
+    This lets a stochastic policy use its own random generator per seed, so its results repeat exactly.
+    """
+    episodes = [run_eval_episode(make_policy_fn(seed), market, seed) for seed in seeds]
     result = {"episodes": len(episodes)}
     for metric in EVAL_METRICS:
         values = np.array([episode[metric] for episode in episodes], dtype=np.float64)
@@ -126,6 +134,34 @@ def greedy_fn_from_module(module, kind):
         return int(torch.argmax(scores).item())
 
     return policy_fn
+
+
+def sampled_policy_maker(module):
+    """Return make_policy_fn(seed) for a logits module that samples actions from its softmax distribution.
+
+    Each seed gets its own torch generator seeded with that seed, so a sampled evaluation is
+    reproducible and never touches the global torch random state used by training.
+    """
+
+    def make_policy_fn(seed):
+        """Return a sampling policy_fn whose random draws come from a generator seeded with seed."""
+        generator = torch.Generator().manual_seed(seed)
+
+        def policy_fn(obs, env):
+            """Draw one action from the module's action distribution for one observation."""
+            with torch.no_grad():
+                logits = module(torch.as_tensor(obs, dtype=torch.float32))
+            probs = torch.softmax(logits, dim=-1)
+            return int(torch.multinomial(probs, 1, generator=generator).item())
+
+        return policy_fn
+
+    return make_policy_fn
+
+
+def evaluate_sampled(module, market="default", seeds=TEST_SEEDS):
+    """Evaluate a logits module with actions sampled from its distribution, one fixed generator per seed."""
+    return evaluate_seeded_policy(sampled_policy_maker(module), market, seeds)
 
 
 def append_row(path, row):
@@ -248,9 +284,25 @@ def val_row(frames, result):
     }
 
 
-def record_validation(tracker, result, paths, module, config, extra):
-    """Log one validation result, remember it, and save the module as the best checkpoint when it is the best so far."""
-    append_row(paths["eval"], val_row(tracker["frames"], result))
+def val_sample_columns(result):
+    """Return the eval CSV columns of a sampled validation, every name prefixed val_sample_."""
+    return {
+        "val_sample_return_mean": result["return_mean"],
+        "val_sample_return_std": result["return_std"],
+        "val_sample_net_worth_mean": result["final_net_worth_mean"],
+        "val_sample_invalid_rate_mean": result["invalid_rate_mean"],
+        "val_sample_hold_rate_mean": result["hold_rate_mean"],
+    }
+
+
+def record_validation(tracker, result, paths, module, config, extra, more_columns=None):
+    """Log one validation result, remember it, and save the module as the best checkpoint when it is the best so far.
+
+    The best checkpoint is always chosen on result, the greedy return; more_columns only adds to the CSV row.
+    """
+    row = val_row(tracker["frames"], result)
+    row.update(more_columns or {})
+    append_row(paths["eval"], row)
     tracker["last_val"] = result
     tracker["last_val_frames"] = tracker["frames"]
     if tracker["best_val"] is None or result["return_mean"] > tracker["best_val"]["return_mean"]:
@@ -259,12 +311,20 @@ def record_validation(tracker, result, paths, module, config, extra):
         save_checkpoint(paths["best"], module, config, extra)
 
 
-def evaluate_on_test(final_module, best_path, build_fn, kind, market, test_seeds):
-    """Score the final module and the best checkpoint on the test seeds, which training never saw."""
+def evaluate_on_test(final_module, best_path, build_fn, kind, market, test_seeds, sampled=False):
+    """Score the final module and the best checkpoint on the test seeds, which training never saw.
+
+    With sampled=True the logits modules are also scored with sampled actions, under the keys
+    final_sample and best_sample.
+    """
     best_module, _ = load_checkpoint(best_path, build_fn)
-    final_result = evaluate_policy(greedy_fn_from_module(final_module, kind), market, test_seeds)
-    best_result = evaluate_policy(greedy_fn_from_module(best_module, kind), market, test_seeds)
-    return {"final": final_result, "best": best_result}
+    modules = {"final": final_module, "best": best_module}
+    results = {name: evaluate_policy(greedy_fn_from_module(module, kind), market, test_seeds)
+               for name, module in modules.items()}
+    if sampled:
+        for name, module in modules.items():
+            results[f"{name}_sample"] = evaluate_sampled(module, market, test_seeds)
+    return results
 
 
 def summary_test_columns(prefix, result):
@@ -286,8 +346,8 @@ def summary_row(algo, exp_id, description, config, tracker, test_results):
         "val_best_return": tracker["best_val"]["return_mean"],
         "val_best_frames": tracker["best_val_frames"],
     })
-    row.update(summary_test_columns("test_final_", test_results["final"]))
-    row.update(summary_test_columns("test_best_", test_results["best"]))
+    for name, result in test_results.items():
+        row.update(summary_test_columns(f"test_{name}_", result))
     return row
 
 

@@ -4,7 +4,7 @@ import torch
 
 from environment import ShopEnv
 from training import pg_training
-from training.common import greedy_fn_from_module, load_checkpoint, read_rows
+from training.common import evaluate_sampled, greedy_fn_from_module, load_checkpoint, read_rows
 from training.dqn_training import build_value_net, run_experiment
 
 PG_SMOKE_OVERRIDES = {"total_frames": 1000, "eval_every_frames": 500}
@@ -27,6 +27,14 @@ EXPECTED_SUMMARY_COLUMNS = (
     "test_final_trust_mean",
     "test_best_lost_per_day_mean",
 )
+PG_EXTRA_SUMMARY_COLUMNS = (
+    "test_final_sample_return_mean",
+    "test_final_sample_net_worth_mean",
+    "test_best_sample_return_mean",
+    "test_best_sample_invalid_rate_mean",
+    "test_best_sample_hold_rate_mean",
+)
+PG_EVAL_COLUMNS = ("val_return_mean", "val_sample_return_mean", "val_sample_invalid_rate_mean", "train_entropy")
 
 
 def sample_observations(steps=SAMPLE_STEPS):
@@ -97,9 +105,23 @@ def test_pg_smoke_run(algo, tmp_path):
     assert paths["final"].parent == tmp_path / "models" / "pg" / algo
     rows, header = read_rows(paths["summary"])
     assert rows[0]["algo"] == algo
-    for column in EXPECTED_SUMMARY_COLUMNS:
+    for column in EXPECTED_SUMMARY_COLUMNS + PG_EXTRA_SUMMARY_COLUMNS:
         assert column in header, column
+    _, eval_header = read_rows(paths["eval"])
+    for column in PG_EVAL_COLUMNS:
+        assert column in eval_header, column
     actor_net, critic_net, data = pg_training.load_pg_checkpoint(paths["final"])
     assert data["extra"]["algo"] == algo
     assert (critic_net is not None) == (algo in PG_ALGOS_WITH_CRITIC)
     assert_same_greedy_actions(result["logits_net"], actor_net)
+
+
+def test_sampled_evaluation_repeats_exactly():
+    """Sampled evaluation of the same actor on the same seeds gives identical results twice, without touching torch's global RNG."""
+    torch.manual_seed(0)
+    actor_net = pg_training.build_logits_net(pg_training.DEFAULT_PPO_CONFIG)
+    rng_before = torch.get_rng_state()
+    first = evaluate_sampled(actor_net, seeds=SMOKE_TEST_SEEDS)
+    second = evaluate_sampled(actor_net, seeds=SMOKE_TEST_SEEDS)
+    assert first == second
+    assert torch.equal(rng_before, torch.get_rng_state())

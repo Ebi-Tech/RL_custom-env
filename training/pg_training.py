@@ -24,6 +24,7 @@ from training.common import (
     elapsed_seconds,
     evaluate_on_test,
     evaluate_policy,
+    evaluate_sampled,
     experiment_paths,
     finished_episode_returns,
     greedy_fn_from_module,
@@ -34,12 +35,15 @@ from training.common import (
     save_checkpoint,
     set_seed,
     summary_row,
+    val_sample_columns,
 )
 
 ALGOS = ("reinforce", "a2c", "ppo")
 REINFORCE_BASELINES = ("none", "normalize", "value")
 ACTIVATIONS = {"relu": nn.ReLU, "tanh": nn.Tanh}
 ADVANTAGE_EPS = 1e-8
+TRAIN_STATS_IN_EVAL = ("entropy", "approx_kl", "clip_fraction")
+TOP_ACTIONS_SHOWN = 4
 
 DEFAULT_REINFORCE_CONFIG = {
     "market": "default",
@@ -336,7 +340,7 @@ def log_update(batch, stats, tracker, paths):
     }
     row.update(stats or {})
     if stats:
-        tracker["entropy"] = stats["entropy"]
+        tracker["last_stats"] = stats
     append_row(paths["train"], row)
 
 
@@ -347,15 +351,41 @@ def critic_extra(agent):
     return {"critic_state_dict": agent["critic_net"].state_dict()}
 
 
+def train_stat_columns(tracker):
+    """Return the latest update's entropy, and PPO's approx_kl and clip_fraction, as train_ eval CSV columns."""
+    stats = tracker["last_stats"]
+    return {f"train_{key}": stats[key] for key in TRAIN_STATS_IN_EVAL if key in stats}
+
+
 def run_validation(algo, agent, config, tracker, paths, val_seeds):
-    """Evaluate the greedy actor on the validation seeds, log it, keep the best checkpoint and print progress."""
-    policy_fn = greedy_fn_from_module(agent["logits_net"], "logits")
-    result = evaluate_policy(policy_fn, market=config["market"], seeds=val_seeds)
-    extra = checkpoint_extra(result, tracker, algo=algo, **critic_extra(agent))
-    record_validation(tracker, result, paths, agent["logits_net"], config, extra)
-    entropy = "" if tracker["entropy"] is None else f"{tracker['entropy']:.3f}"
-    print(f"frames {tracker['frames']:>7}  val return {result['return_mean']:>8.2f}  "
-          f"entropy {entropy:>5}  {elapsed_seconds(tracker):>7.1f}s")
+    """Evaluate the actor greedily and with sampled actions on the validation seeds, log both and print progress.
+
+    The best checkpoint is chosen on the greedy return only.
+    """
+    greedy = evaluate_policy(greedy_fn_from_module(agent["logits_net"], "logits"), config["market"], val_seeds)
+    sample = evaluate_sampled(agent["logits_net"], config["market"], val_seeds)
+    extra = checkpoint_extra(greedy, tracker, algo=algo, val_sample_eval=sample, **critic_extra(agent))
+    more_columns = val_sample_columns(sample)
+    more_columns.update(train_stat_columns(tracker))
+    record_validation(tracker, greedy, paths, agent["logits_net"], config, extra, more_columns)
+    entropy = more_columns.get("train_entropy")
+    entropy_text = "" if entropy is None else f"{entropy:.3f}"
+    print(f"frames {tracker['frames']:>7}  val greedy {greedy['return_mean']:>8.2f}  "
+          f"sample {sample['return_mean']:>8.2f}  entropy {entropy_text:>5}  {elapsed_seconds(tracker):>7.1f}s")
+
+
+def top_actions(result, count=TOP_ACTIONS_SHOWN):
+    """Return the most chosen actions of an evaluation as 'name share' text, most frequent first."""
+    ranked = sorted(result["action_freq"].items(), key=lambda item: item[1], reverse=True)[:count]
+    return ", ".join(f"{name} {share:.3f}" for name, share in ranked)
+
+
+def print_test_results(test_results):
+    """Print return, net worth, invalid rate, hold rate and top actions of every test evaluation."""
+    for name, result in test_results.items():
+        print(f"test {name:<12} return {result['return_mean']:>8.2f}  net worth {result['final_net_worth_mean']:>11.0f}  "
+              f"invalid {result['invalid_rate_mean']:.3f}  hold {result['hold_rate_mean']:.3f}  "
+              f"bankrupt {result['bankruptcies']}  top: {top_actions(result)}")
 
 
 def load_pg_checkpoint(path):
@@ -374,8 +404,9 @@ def run_experiment(algo, exp_id, overrides=None, log_dir="logs", model_dir="mode
                    test_seeds=TEST_SEEDS, description=""):
     """Train one REINFORCE, A2C or PPO agent with the defaults plus overrides, log everything and save the models.
 
-    Validation seeds pick the best checkpoint during training; after training the final and the
-    best actors are both scored on the test seeds, and one row is added to logs/summary.csv.
+    Validation seeds pick the best checkpoint on the greedy return during training; after training
+    the final and the best actors are scored on the test seeds both greedily and with sampled
+    actions, and one row is added to logs/summary.csv.
     """
     config = merge_config(algo, overrides)
     set_seed(config["seed"])
@@ -385,7 +416,7 @@ def run_experiment(algo, exp_id, overrides=None, log_dir="logs", model_dir="mode
     agent = build_agent(algo, config, env)
     collector = build_collector(algo, config, env, agent["actor"])
     tracker = new_tracker(config)
-    tracker["entropy"] = None
+    tracker["last_stats"] = {}
     for batch in collector:
         tracker["frames"] += batch.numel()
         stats = UPDATE_FUNCTIONS[algo](agent, batch, config)
@@ -399,10 +430,9 @@ def run_experiment(algo, exp_id, overrides=None, log_dir="logs", model_dir="mode
     final_extra = checkpoint_extra(tracker["last_val"], tracker, algo=algo, **critic_extra(agent))
     save_checkpoint(paths["final"], agent["logits_net"], config, final_extra)
     test_results = evaluate_on_test(agent["logits_net"], paths["best"], build_logits_net, "logits",
-                                    config["market"], test_seeds)
+                                    config["market"], test_seeds, sampled=True)
     append_row(paths["summary"], summary_row(algo, exp_id, description, config, tracker, test_results))
-    print(f"test return: final {test_results['final']['return_mean']:.2f}, "
-          f"best checkpoint {test_results['best']['return_mean']:.2f}")
+    print_test_results(test_results)
     return {"logits_net": agent["logits_net"], "critic_net": agent["critic_net"], "val_final": tracker["last_val"],
             "val_best": tracker["best_val"], "test": test_results, "paths": paths, "frames": tracker["frames"],
             "wall_time_s": elapsed_seconds(tracker)}
