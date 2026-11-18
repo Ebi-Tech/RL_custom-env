@@ -45,7 +45,7 @@ def run_episode(policy, seed, daily_log=None):
         add_day(totals, reward, info)
         if daily_log is not None:
             daily_log.append(format_day(info, env))
-    finish_totals(totals, info, terminated)
+    finish_totals(totals, info)
     return totals
 
 
@@ -62,10 +62,10 @@ def add_day(totals, reward, info):
     totals["days"] += 1
 
 
-def finish_totals(totals, info, terminated):
+def finish_totals(totals, info):
     """Turn the running sums into the per-episode stats the summary prints."""
     totals["final_cash"] = info["cash"]
-    totals["bankrupt"] = terminated
+    totals["bankrupt"] = info["bankrupt"]
     totals["haggle_rate"] = totals["haggle_successes"] / max(totals["haggles"], 1)
     totals["mean_trust"] = totals["trust_sum"] / totals["days"]
     totals["lost_per_day"] = totals["lost"] / totals["days"]

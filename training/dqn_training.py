@@ -6,9 +6,6 @@ Ad hoc run:           uv run python -m training.dqn_training --exp-id my_test --
 """
 import argparse
 import copy
-import math
-import time
-from pathlib import Path
 
 import torch
 from tensordict.nn import TensorDictSequential
@@ -23,21 +20,28 @@ from training.common import (
     TEST_SEEDS,
     VAL_SEEDS,
     append_row,
+    checkpoint_extra,
+    collector_frames,
+    elapsed_seconds,
+    evaluate_on_test,
     evaluate_policy,
+    experiment_paths,
+    finished_episode_returns,
+    finished_exp_ids,
     greedy_fn_from_module,
-    load_checkpoint,
     make_env,
-    read_rows,
+    new_tracker,
+    record_validation,
+    remove_old_logs,
     save_checkpoint,
     set_seed,
+    summary_row,
 )
 from training.experiments import DQN_EXPERIMENTS, find_experiment
 
 ALGO = "dqn"
 ACTIVATIONS = {"relu": nn.ReLU, "tanh": nn.Tanh}
 TARGET_UPDATES = ("hard", "soft")
-SUMMARY_TEST_METRICS = ("net_worth", "invalid_rate", "hold_rate", "trust", "lost_per_day")
-SUMMARY_METRIC_KEYS = {"net_worth": "final_net_worth"}
 
 DEFAULT_DQN_CONFIG = {
     "market": "default",
@@ -122,12 +126,6 @@ def build_target_updater(config, loss_module):
     return HardUpdate(loss_module, value_network_update_interval=config["hard_update_interval"])
 
 
-def collector_frames(config):
-    """Round total frames up to whole batches, which is what the collector would collect anyway."""
-    batches = math.ceil(config["total_frames"] / config["frames_per_batch"])
-    return batches * config["frames_per_batch"]
-
-
 def build_collector(config, env, policy):
     """Build the synchronous collector that gathers one batch of transitions at a time."""
     return SyncDataCollector(
@@ -171,9 +169,7 @@ def train_on_batch(agent, buffer, config, tracker):
 
 def log_finished_episodes(batch, tracker, agent, paths):
     """Write one train CSV row per episode that ended in this batch."""
-    done = batch["next", "done"].squeeze(-1)
-    returns = batch["next", "episode_reward"].squeeze(-1)[done]
-    for episode_return in returns.tolist():
+    for episode_return in finished_episode_returns(batch):
         tracker["episodes"] += 1
         append_row(paths["train"], {
             "frames": tracker["frames"],
@@ -196,83 +192,9 @@ def run_validation(agent, config, tracker, paths, val_seeds):
     """Evaluate the greedy policy on the validation seeds, log it, keep the best model and print progress."""
     policy_fn = greedy_fn_from_module(agent["value_net"], "q")
     result = evaluate_policy(policy_fn, market=config["market"], seeds=val_seeds)
-    elapsed = time.time() - tracker["start_time"]
-    append_row(paths["eval"], {
-        "frames": tracker["frames"],
-        "val_return_mean": result["return_mean"],
-        "val_return_std": result["return_std"],
-        "val_final_cash_mean": result["final_cash_mean"],
-        "val_net_worth_mean": result["final_net_worth_mean"],
-        "val_lost_per_day_mean": result["lost_per_day_mean"],
-        "val_trust_mean": result["trust_mean"],
-        "val_defaults_mean": result["defaults_mean"],
-        "val_invalid_rate_mean": result["invalid_rate_mean"],
-        "val_hold_rate_mean": result["hold_rate_mean"],
-    })
-    tracker["last_val"] = result
-    tracker["last_val_frames"] = tracker["frames"]
-    if tracker["best_val"] is None or result["return_mean"] > tracker["best_val"]["return_mean"]:
-        tracker["best_val"] = result
-        tracker["best_val_frames"] = tracker["frames"]
-        save_checkpoint(paths["best"], agent["value_net"], config, checkpoint_extra(result, tracker, elapsed))
+    record_validation(tracker, result, paths, agent["value_net"], config, checkpoint_extra(result, tracker))
     print(f"frames {tracker['frames']:>7}  val return {result['return_mean']:>8.2f}  "
-          f"epsilon {float(agent['exploration'].eps):.3f}  {elapsed:>7.1f}s")
-    return result
-
-
-def checkpoint_extra(val_result, tracker, elapsed):
-    """Return the extra info stored next to the weights in a checkpoint."""
-    return {"val_eval": val_result, "frames": tracker["frames"], "wall_time_s": elapsed}
-
-
-def run_test_evaluation(paths, value_net, config, test_seeds):
-    """Evaluate the final network and the best checkpoint on the test seeds, which training never saw."""
-    best_net, _ = load_checkpoint(paths["best"], build_value_net)
-    final_result = evaluate_policy(greedy_fn_from_module(value_net, "q"), config["market"], test_seeds)
-    best_result = evaluate_policy(greedy_fn_from_module(best_net, "q"), config["market"], test_seeds)
-    return {"final": final_result, "best": best_result}
-
-
-def summary_test_columns(prefix, result):
-    """Return the summary columns of one test evaluation, every name starting with its prefix."""
-    columns = {f"{prefix}return_mean": result["return_mean"], f"{prefix}return_std": result["return_std"]}
-    for metric in SUMMARY_TEST_METRICS:
-        columns[f"{prefix}{metric}_mean"] = result[f"{SUMMARY_METRIC_KEYS.get(metric, metric)}_mean"]
-    return columns
-
-
-def experiment_paths(exp_id, log_dir, model_dir):
-    """Return every file path one experiment writes."""
-    log_dir, model_dir = Path(log_dir), Path(model_dir)
-    return {
-        "train": log_dir / ALGO / f"{exp_id}_train.csv",
-        "eval": log_dir / ALGO / f"{exp_id}_eval.csv",
-        "summary": log_dir / "summary.csv",
-        "final": model_dir / ALGO / f"{exp_id}_final.pt",
-        "best": model_dir / ALGO / f"{exp_id}_best.pt",
-    }
-
-
-def remove_old_logs(paths):
-    """Delete this experiment's old train and eval CSVs so a rerun does not mix two runs."""
-    for key in ("train", "eval"):
-        paths[key].unlink(missing_ok=True)
-
-
-def summary_row(exp_id, description, config, tracker, test_results, elapsed):
-    """Build the one-line summary of a finished experiment for logs/summary.csv."""
-    row = {"algo": ALGO, "exp_id": exp_id, "description": description}
-    row.update({key: str(value) if isinstance(value, list) else value for key, value in config.items()})
-    row.update({
-        "frames": tracker["frames"],
-        "wall_time_s": round(elapsed, 1),
-        "val_final_return": tracker["last_val"]["return_mean"],
-        "val_best_return": tracker["best_val"]["return_mean"],
-        "val_best_frames": tracker["best_val_frames"],
-    })
-    row.update(summary_test_columns("test_final_", test_results["final"]))
-    row.update(summary_test_columns("test_best_", test_results["best"]))
-    return row
+          f"epsilon {float(agent['exploration'].eps):.3f}  {elapsed_seconds(tracker):>7.1f}s")
 
 
 def run_experiment(exp_id, overrides=None, log_dir="logs", model_dir="models", val_seeds=VAL_SEEDS,
@@ -285,15 +207,14 @@ def run_experiment(exp_id, overrides=None, log_dir="logs", model_dir="models", v
     """
     config = merge_config(overrides)
     set_seed(config["seed"])
-    paths = experiment_paths(exp_id, log_dir, model_dir)
+    paths = experiment_paths(exp_id, ALGO, ALGO, log_dir, model_dir)
     remove_old_logs(paths)
     env = make_env(config["market"], config["seed"])
     agent = build_agent(config, env)
     collector = build_collector(config, env, agent["policy"])
     buffer = build_buffer(config)
-    tracker = {"frames": 0, "episodes": 0, "losses": [], "q_values": [], "best_val": None,
-               "best_val_frames": None, "last_val": None, "last_val_frames": None,
-               "start_time": time.time(), "next_eval": config["eval_every_frames"]}
+    tracker = new_tracker(config)
+    tracker.update({"losses": [], "q_values": []})
     for batch in collector:
         tracker["frames"] += batch.numel()
         buffer.extend(batch.reshape(-1))
@@ -307,16 +228,15 @@ def run_experiment(exp_id, overrides=None, log_dir="logs", model_dir="models", v
     collector.shutdown()
     if tracker["last_val_frames"] != tracker["frames"]:
         run_validation(agent, config, tracker, paths, val_seeds)
-    elapsed = time.time() - tracker["start_time"]
-    save_checkpoint(paths["final"], agent["value_net"], config,
-                    checkpoint_extra(tracker["last_val"], tracker, elapsed))
-    test_results = run_test_evaluation(paths, agent["value_net"], config, test_seeds)
-    elapsed = time.time() - tracker["start_time"]
-    append_row(paths["summary"], summary_row(exp_id, description, config, tracker, test_results, elapsed))
+    save_checkpoint(paths["final"], agent["value_net"], config, checkpoint_extra(tracker["last_val"], tracker))
+    test_results = evaluate_on_test(agent["value_net"], paths["best"], build_value_net, "q",
+                                    config["market"], test_seeds)
+    append_row(paths["summary"], summary_row(ALGO, exp_id, description, config, tracker, test_results))
     print(f"test return: final {test_results['final']['return_mean']:.2f}, "
           f"best checkpoint {test_results['best']['return_mean']:.2f}")
     return {"value_net": agent["value_net"], "val_final": tracker["last_val"], "val_best": tracker["best_val"],
-            "test": test_results, "paths": paths, "frames": tracker["frames"], "wall_time_s": elapsed}
+            "test": test_results, "paths": paths, "frames": tracker["frames"],
+            "wall_time_s": elapsed_seconds(tracker)}
 
 
 def parse_args():
@@ -353,12 +273,6 @@ def selected_experiments(args):
     return [find_experiment(exp_id) for exp_id in wanted]
 
 
-def finished_exp_ids(log_dir="logs"):
-    """Return the DQN exp_ids that already have a row in summary.csv."""
-    rows, _ = read_rows(Path(log_dir) / "summary.csv")
-    return {row["exp_id"] for row in rows if row.get("algo") == ALGO}
-
-
 def run_one(experiment, extra_overrides):
     """Run one experiment entry with any command line overrides on top and print its result."""
     overrides = {**experiment["overrides"], **extra_overrides}
@@ -373,7 +287,7 @@ def main():
     args = parse_args()
     if args.only and not args.sweep:
         raise SystemExit("--only needs --sweep")
-    done = finished_exp_ids() if args.skip_done else set()
+    done = finished_exp_ids(ALGO) if args.skip_done else set()
     for experiment in selected_experiments(args):
         if experiment["exp_id"] in done:
             print(f"skipping {experiment['exp_id']}, already in summary.csv")

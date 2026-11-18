@@ -1,9 +1,14 @@
-"""Smoke test: a tiny DQN run finishes, writes its logs and checkpoints, and reloads to the same policy."""
+"""Smoke tests: tiny DQN, REINFORCE, A2C and PPO runs finish, write their logs and checkpoints, and reload identically."""
+import pytest
 import torch
 
 from environment import ShopEnv
+from training import pg_training
 from training.common import greedy_fn_from_module, load_checkpoint, read_rows
 from training.dqn_training import build_value_net, run_experiment
+
+PG_SMOKE_OVERRIDES = {"total_frames": 1000, "eval_every_frames": 500}
+PG_ALGOS_WITH_CRITIC = ("a2c", "ppo")
 
 SMOKE_OVERRIDES = {"total_frames": 1000, "init_random_frames": 200, "eval_every_frames": 500}
 SMOKE_VAL_SEEDS = range(500, 502)
@@ -64,3 +69,37 @@ def test_dqn_smoke_run(tmp_path):
     with torch.no_grad():
         obs = torch.as_tensor(sample_observations()[0])
         assert torch.allclose(result["value_net"](obs), reloaded(obs))
+
+
+def assert_same_greedy_actions(first_net, second_net):
+    """Check that two logits networks pick the same greedy action on every sampled observation."""
+    first_fn = greedy_fn_from_module(first_net, "logits")
+    second_fn = greedy_fn_from_module(second_net, "logits")
+    for obs in sample_observations():
+        assert first_fn(obs, None) == second_fn(obs, None)
+
+
+@pytest.mark.parametrize("algo", pg_training.ALGOS)
+def test_pg_smoke_run(algo, tmp_path):
+    """A tiny run of each policy-gradient algorithm writes its files, and the reloaded actor acts identically."""
+    result = pg_training.run_experiment(
+        algo,
+        f"{algo}_smoke",
+        PG_SMOKE_OVERRIDES,
+        log_dir=tmp_path / "logs",
+        model_dir=tmp_path / "models",
+        val_seeds=SMOKE_VAL_SEEDS,
+        test_seeds=SMOKE_TEST_SEEDS,
+    )
+    paths = result["paths"]
+    for key in ("train", "eval", "summary", "final", "best"):
+        assert paths[key].exists(), key
+    assert paths["final"].parent == tmp_path / "models" / "pg" / algo
+    rows, header = read_rows(paths["summary"])
+    assert rows[0]["algo"] == algo
+    for column in EXPECTED_SUMMARY_COLUMNS:
+        assert column in header, column
+    actor_net, critic_net, data = pg_training.load_pg_checkpoint(paths["final"])
+    assert data["extra"]["algo"] == algo
+    assert (critic_net is not None) == (algo in PG_ALGOS_WITH_CRITIC)
+    assert_same_greedy_actions(result["logits_net"], actor_net)

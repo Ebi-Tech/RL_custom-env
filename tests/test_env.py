@@ -198,25 +198,30 @@ def test_loose_rice_shrinks_from_waste_without_customers():
     assert env.stock[LOOSE_RICE] == pytest.approx(loose_before - expected_waste)
 
 
-def test_truncates_exactly_at_day_90_when_holding():
-    """Holding every day runs the full episode and truncates on day 90, not before."""
+def test_terminates_exactly_at_day_90_when_holding():
+    """Holding every day runs the full episode and terminates on day 90, never truncating."""
     env = ShopEnv()
     env.reset(seed=SEED)
-    for day in range(1, 91):
+    episode_days = env.config["calendar"]["episode_days"]
+    for day in range(1, episode_days + 1):
         _, _, terminated, truncated, info = env.step(HOLD)
-        assert not terminated
+        assert not truncated
         assert info["day"] == day
-        assert truncated == (day == 90)
+        assert terminated == (day == episode_days)
+        assert not info["bankrupt"]
+        assert info["end_reason"] == ("day_90" if day == episode_days else None)
 
 
-def test_negative_cash_terminates():
-    """Cash below zero after the fixed cost ends the episode as terminated."""
+def test_negative_cash_terminates_as_bankrupt():
+    """Cash below zero after the fixed cost ends the episode as terminated, flagged as bankruptcy."""
     env = ShopEnv()
     env.reset(seed=SEED)
     env.cash = -1_000_000.0
     _, _, terminated, truncated, info = env.step(HOLD)
     assert terminated
     assert not truncated
+    assert info["bankrupt"]
+    assert info["end_reason"] == "bankrupt"
     assert any(event.startswith("Bankrupt") for event in info["events"])
 
 

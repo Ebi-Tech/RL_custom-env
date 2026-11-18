@@ -1,6 +1,8 @@
-"""Tools shared by every training algorithm: seeding, env building, evaluation, CSV logs and checkpoints."""
+"""Tools shared by every training algorithm: seeding, env building, evaluation, logs, checkpoints and summaries."""
 import csv
+import math
 import random
+import time
 from pathlib import Path
 
 import numpy as np
@@ -17,6 +19,8 @@ EVAL_METRICS = (
 )
 HOLD_ACTION = ACTION_NAMES.index("hold")
 POLICY_KINDS = ("q", "logits")
+SUMMARY_TEST_METRICS = ("net_worth", "invalid_rate", "hold_rate", "trust", "lost_per_day")
+SUMMARY_METRIC_KEYS = {"net_worth": "final_net_worth"}
 
 
 def set_seed(seed):
@@ -59,7 +63,7 @@ def run_eval_episode(policy_fn, market, seed):
         "defaults": stats["defaults"],
         "invalid_rate": stats["invalid"] / stats["days"],
         "hold_rate": action_counts[HOLD_ACTION] / stats["days"],
-        "bankrupt": bool(terminated),
+        "bankrupt": bool(info["bankrupt"]),
         "action_counts": action_counts,
     }
 
@@ -181,3 +185,125 @@ def load_checkpoint(path, build_fn):
     module.load_state_dict(data["state_dict"])
     module.eval()
     return module, data
+
+
+def experiment_paths(exp_id, log_subdir, model_subdir, log_dir="logs", model_dir="models"):
+    """Return every file path one experiment writes, under logs/<log_subdir> and models/<model_subdir>."""
+    log_folder = Path(log_dir) / log_subdir
+    model_folder = Path(model_dir) / model_subdir
+    return {
+        "train": log_folder / f"{exp_id}_train.csv",
+        "eval": log_folder / f"{exp_id}_eval.csv",
+        "summary": Path(log_dir) / "summary.csv",
+        "final": model_folder / f"{exp_id}_final.pt",
+        "best": model_folder / f"{exp_id}_best.pt",
+    }
+
+
+def remove_old_logs(paths):
+    """Delete this experiment's old train and eval CSVs so a rerun does not mix two runs."""
+    for key in ("train", "eval"):
+        paths[key].unlink(missing_ok=True)
+
+
+def new_tracker(config):
+    """Return the running state every training loop keeps: frames, episodes, timing and validation results."""
+    return {
+        "frames": 0,
+        "episodes": 0,
+        "best_val": None,
+        "best_val_frames": None,
+        "last_val": None,
+        "last_val_frames": None,
+        "start_time": time.time(),
+        "next_eval": config["eval_every_frames"],
+    }
+
+
+def elapsed_seconds(tracker):
+    """Return the seconds since the run started."""
+    return time.time() - tracker["start_time"]
+
+
+def checkpoint_extra(val_result, tracker, **more):
+    """Return the extra info stored next to the weights: the validation result, frames, time and anything more."""
+    extra = {"val_eval": val_result, "frames": tracker["frames"], "wall_time_s": elapsed_seconds(tracker)}
+    extra.update(more)
+    return extra
+
+
+def val_row(frames, result):
+    """Return one row of the eval CSV, every metric prefixed val_ because it comes from VAL_SEEDS."""
+    return {
+        "frames": frames,
+        "val_return_mean": result["return_mean"],
+        "val_return_std": result["return_std"],
+        "val_final_cash_mean": result["final_cash_mean"],
+        "val_net_worth_mean": result["final_net_worth_mean"],
+        "val_lost_per_day_mean": result["lost_per_day_mean"],
+        "val_trust_mean": result["trust_mean"],
+        "val_defaults_mean": result["defaults_mean"],
+        "val_invalid_rate_mean": result["invalid_rate_mean"],
+        "val_hold_rate_mean": result["hold_rate_mean"],
+    }
+
+
+def record_validation(tracker, result, paths, module, config, extra):
+    """Log one validation result, remember it, and save the module as the best checkpoint when it is the best so far."""
+    append_row(paths["eval"], val_row(tracker["frames"], result))
+    tracker["last_val"] = result
+    tracker["last_val_frames"] = tracker["frames"]
+    if tracker["best_val"] is None or result["return_mean"] > tracker["best_val"]["return_mean"]:
+        tracker["best_val"] = result
+        tracker["best_val_frames"] = tracker["frames"]
+        save_checkpoint(paths["best"], module, config, extra)
+
+
+def evaluate_on_test(final_module, best_path, build_fn, kind, market, test_seeds):
+    """Score the final module and the best checkpoint on the test seeds, which training never saw."""
+    best_module, _ = load_checkpoint(best_path, build_fn)
+    final_result = evaluate_policy(greedy_fn_from_module(final_module, kind), market, test_seeds)
+    best_result = evaluate_policy(greedy_fn_from_module(best_module, kind), market, test_seeds)
+    return {"final": final_result, "best": best_result}
+
+
+def summary_test_columns(prefix, result):
+    """Return the summary columns of one test evaluation, every name starting with its prefix."""
+    columns = {f"{prefix}return_mean": result["return_mean"], f"{prefix}return_std": result["return_std"]}
+    for metric in SUMMARY_TEST_METRICS:
+        columns[f"{prefix}{metric}_mean"] = result[f"{SUMMARY_METRIC_KEYS.get(metric, metric)}_mean"]
+    return columns
+
+
+def summary_row(algo, exp_id, description, config, tracker, test_results):
+    """Build the one-line summary of a finished experiment for logs/summary.csv, the same for every algorithm."""
+    row = {"algo": algo, "exp_id": exp_id, "description": description}
+    row.update({key: str(value) if isinstance(value, list) else value for key, value in config.items()})
+    row.update({
+        "frames": tracker["frames"],
+        "wall_time_s": round(elapsed_seconds(tracker), 1),
+        "val_final_return": tracker["last_val"]["return_mean"],
+        "val_best_return": tracker["best_val"]["return_mean"],
+        "val_best_frames": tracker["best_val_frames"],
+    })
+    row.update(summary_test_columns("test_final_", test_results["final"]))
+    row.update(summary_test_columns("test_best_", test_results["best"]))
+    return row
+
+
+def finished_exp_ids(algo, log_dir="logs"):
+    """Return the exp_ids of one algorithm that already have a row in summary.csv."""
+    rows, _ = read_rows(Path(log_dir) / "summary.csv")
+    return {row["exp_id"] for row in rows if row.get("algo") == algo}
+
+
+def finished_episode_returns(batch):
+    """Return the returns of the episodes that ended inside a collected batch."""
+    done = batch["next", "done"].squeeze(-1)
+    return batch["next", "episode_reward"].squeeze(-1)[done].tolist()
+
+
+def collector_frames(config):
+    """Round total frames up to whole batches, which is what the collector would collect anyway."""
+    batches = math.ceil(config["total_frames"] / config["frames_per_batch"])
+    return batches * config["frames_per_batch"]
