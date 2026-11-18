@@ -192,6 +192,8 @@ class ShopEnv(gymnasium.Env):
             "waste": 0.0,
             "holding_cost": 0.0,
             "profit_today": 0.0,
+            "bankrupt": False,
+            "end_reason": None,
             "events": [],
         }
 
@@ -490,7 +492,12 @@ class ShopEnv(gymnasium.Env):
         self.day_of_month = self.day_of_month % month_length + 1
 
     def _score_day(self, today, wealth_before):
-        """Compute the day's reward and whether the episode ended by bankruptcy or by time."""
+        """Compute the day's reward and whether the episode ended, by bankruptcy or on the final day.
+
+        Both endings are terminal: day 90 is the true end of the task, since the day is observed
+        and the debt settlement happens on it, so nothing is truncated. The info flags bankrupt
+        and end_reason tell the two endings apart, with bankruptcy taking precedence.
+        """
         rewards = self.config["reward"]
         money_unit = rewards["money_unit"] * self.config["money_scale"]
         profit = self._wealth() - wealth_before
@@ -501,12 +508,13 @@ class ShopEnv(gymnasium.Env):
         final_day = self.day >= self.config["calendar"]["episode_days"]
         if final_day:
             reward += rewards["final_debt_weight"] * self.total_debt() / money_unit
-        terminated = self.cash < 0
-        if terminated:
+        bankrupt = self.cash < 0
+        if bankrupt:
             reward -= rewards["bankruptcy_penalty"]
             today["events"].append("Bankrupt: cash fell below zero")
-        truncated = final_day and not terminated
-        return float(reward), bool(terminated), bool(truncated)
+        today["bankrupt"] = bool(bankrupt)
+        today["end_reason"] = end_reason(bankrupt, final_day)
+        return float(reward), bool(bankrupt or final_day), False
 
     def _observation(self):
         """Build the 23 value observation in its fixed order, with every value clipped to [0, 1]."""
@@ -575,6 +583,15 @@ class ShopEnv(gymnasium.Env):
         info.update(today)
         info["units_sold"] = today["units_sold"].tolist()
         return info
+
+
+def end_reason(bankrupt, final_day):
+    """Return why the episode ended today: "bankrupt", "day_90", or None while it continues."""
+    if bankrupt:
+        return "bankrupt"
+    if final_day:
+        return "day_90"
+    return None
 
 
 def settle_haggle(ask, buyer_max, floor_ratio):
