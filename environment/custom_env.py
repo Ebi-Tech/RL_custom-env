@@ -366,10 +366,15 @@ class ShopEnv(gymnasium.Env):
         return normal_price * self.config["pricing"]["band_multipliers"][self.price_band]
 
     def _fixed_price(self, purchase, quantity, today):
-        """Sell at the band price unless the buyer walks away over price, which is likelier at high band."""
+        """Sell at the band price unless the buyer walks away over price, which is likelier at high band.
+
+        A walk away at the high band also costs trust, because the shop gets a name for being expensive.
+        """
         walk_prob = self.config["pricing"]["walkaway_probs"][self.price_band]
         if self.np_random.random() < walk_prob:
             today["price_walkaways"] += 1
+            if self.price_band == HIGH_BAND:
+                self._change_trust(-self.config["pricing"]["price_walkaway_trust_loss"])
             return None
         return quantity * self._band_price(self._item_price(purchase))
 
@@ -422,6 +427,8 @@ class ShopEnv(gymnasium.Env):
                 events.append(f"Sold {units:g} {product['label']}")
         if today["lost_customers"]:
             events.append(f"Lost {today['lost_customers']} customers to empty shelves")
+        if today["price_walkaways"] and self.price_band == HIGH_BAND:
+            events.append(f"Lost {today['price_walkaways']} buyers to high prices")
         if today["refused_credit"]:
             events.append(f"Refused credit to {today['refused_credit']} buyers")
         if today["jara_count"]:
