@@ -26,6 +26,7 @@ EXPECTED_SUMMARY_COLUMNS = (
     "test_best_hold_rate_mean",
     "test_final_trust_mean",
     "test_best_lost_per_day_mean",
+    "test_final_noop_rate_mean",
 )
 PG_EXTRA_SUMMARY_COLUMNS = (
     "test_final_sample_return_mean",
@@ -34,7 +35,9 @@ PG_EXTRA_SUMMARY_COLUMNS = (
     "test_best_sample_invalid_rate_mean",
     "test_best_sample_hold_rate_mean",
 )
-PG_EVAL_COLUMNS = ("val_return_mean", "val_sample_return_mean", "val_sample_invalid_rate_mean", "train_entropy")
+PG_EVAL_COLUMNS = (
+    "val_return_mean", "val_noop_rate_mean", "val_sample_return_mean", "val_sample_noop_rate_mean", "train_entropy",
+)
 
 
 def sample_observations(steps=SAMPLE_STEPS):
@@ -125,3 +128,12 @@ def test_sampled_evaluation_repeats_exactly():
     second = evaluate_sampled(actor_net, seeds=SMOKE_TEST_SEEDS)
     assert first == second
     assert torch.equal(rng_before, torch.get_rng_state())
+
+
+def test_a2c_runs_with_gae_lambda_zero(tmp_path):
+    """A2C with gae_lambda 0, the one step TD advantage of sweep entry a2c_06, trains without crashing."""
+    overrides = {**PG_SMOKE_OVERRIDES, "gae_lambda": 0.0}
+    result = pg_training.run_experiment("a2c", "a2c_lambda0", overrides, log_dir=tmp_path / "logs",
+                                        model_dir=tmp_path / "models", val_seeds=SMOKE_VAL_SEEDS,
+                                        test_seeds=SMOKE_TEST_SEEDS)
+    assert result["paths"]["final"].exists()

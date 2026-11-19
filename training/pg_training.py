@@ -1,6 +1,8 @@
 """Policy-gradient training (REINFORCE, A2C and PPO) for the Beyond Sale Shop environment with TorchRL 0.3.1.
 
-Run one experiment:  uv run python -m training.pg_training --algo ppo --exp-id ppo_smoke --total-frames 20000
+Run one sweep entry:  uv run python -m training.pg_training --algo ppo --exp-id ppo_03
+Run a sweep:          uv run python -m training.pg_training --algo a2c --sweep [--only a2c_02,a2c_05] [--skip-done]
+Ad hoc run:           uv run python -m training.pg_training --algo ppo --exp-id my_test --total-frames 20000
 """
 import argparse
 import copy
@@ -27,6 +29,7 @@ from training.common import (
     evaluate_sampled,
     experiment_paths,
     finished_episode_returns,
+    finished_exp_ids,
     greedy_fn_from_module,
     make_env,
     new_tracker,
@@ -37,6 +40,7 @@ from training.common import (
     summary_row,
     val_sample_columns,
 )
+from training.experiments import find_experiment, select_experiments
 
 ALGOS = ("reinforce", "a2c", "ppo")
 REINFORCE_BASELINES = ("none", "normalize", "value")
@@ -165,11 +169,20 @@ def build_agent(algo, config, env):
         agent["critic"] = ValueOperator(agent["critic_net"], in_keys=["observation"])
     if algo in ("a2c", "ppo"):
         agent["loss_module"] = build_loss_module(algo, config, agent)
-        agent["advantage_module"] = GAE(gamma=config["gamma"], lmbda=config["gae_lambda"],
-                                        value_network=agent["critic"])
+        agent["advantage_module"] = build_advantage_module(config, agent["critic"])
     agent["params"] = trainable_parameters(agent)
     agent["optimizer"] = torch.optim.Adam(agent["params"], lr=config["lr"])
     return agent
+
+
+def build_advantage_module(config, critic):
+    """Return the GAE module, using TorchRL's loop version when gae_lambda is 0.
+
+    In TorchRL 0.3.1 the fast vectorised GAE crashes at lambda 0, because its (gamma * lambda)^k
+    filter is cut to nothing; the loop version gives exactly the one step TD advantage there.
+    """
+    return GAE(gamma=config["gamma"], lmbda=config["gae_lambda"], value_network=critic,
+               vectorized=config["gae_lambda"] > 0)
 
 
 def build_loss_module(algo, config, agent):
@@ -401,16 +414,16 @@ def load_pg_checkpoint(path):
 
 
 def run_experiment(algo, exp_id, overrides=None, log_dir="logs", model_dir="models", val_seeds=VAL_SEEDS,
-                   test_seeds=TEST_SEEDS, description=""):
+                   test_seeds=TEST_SEEDS, description="", summary_path=None):
     """Train one REINFORCE, A2C or PPO agent with the defaults plus overrides, log everything and save the models.
 
     Validation seeds pick the best checkpoint on the greedy return during training; after training
     the final and the best actors are scored on the test seeds both greedily and with sampled
-    actions, and one row is added to logs/summary.csv.
+    actions, and one row is added to logs/summary.csv, or to summary_path when given.
     """
     config = merge_config(algo, overrides)
     set_seed(config["seed"])
-    paths = experiment_paths(exp_id, algo, f"pg/{algo}", log_dir, model_dir)
+    paths = experiment_paths(exp_id, algo, f"pg/{algo}", log_dir, model_dir, summary_path)
     remove_old_logs(paths)
     env = make_env(config["market"], config["seed"])
     agent = build_agent(algo, config, env)
@@ -443,11 +456,14 @@ def parse_args():
     parser = argparse.ArgumentParser(description="Train REINFORCE, A2C or PPO on the Beyond Sale Shop environment.")
     parser.add_argument("--algo", required=True, choices=ALGOS)
     target = parser.add_mutually_exclusive_group(required=True)
-    target.add_argument("--exp-id", help="an id for this run")
-    target.add_argument("--sweep", action="store_true", help="placeholder, the PG sweep is defined in the next step")
+    target.add_argument("--exp-id", help="a sweep id such as ppo_03, or any new id for an ad hoc run")
+    target.add_argument("--sweep", action="store_true", help="run every experiment in the algorithm's sweep list")
+    parser.add_argument("--only", help="comma separated sweep ids to run, used with --sweep")
+    parser.add_argument("--skip-done", action="store_true", help="skip ids that already have a summary row")
     parser.add_argument("--total-frames", type=int)
     parser.add_argument("--market", choices=["default", "harsh", "price_scale"])
     parser.add_argument("--seed", type=int)
+    parser.add_argument("--summary-path", help="write the summary row here instead of logs/summary.csv")
     return parser.parse_args()
 
 
@@ -457,15 +473,35 @@ def cli_overrides(args):
     return {key: value for key, value in overrides.items() if value is not None}
 
 
-def main():
-    """Run one policy-gradient experiment from the command line options."""
-    args = parse_args()
-    if args.sweep:
-        raise SystemExit("The policy-gradient sweep is not defined yet; run one experiment with --exp-id.")
-    print(f"\n=== {args.algo} {args.exp_id}: ad hoc run ===")
-    result = run_experiment(args.algo, args.exp_id, cli_overrides(args), description="ad hoc run")
+def selected_experiments(args):
+    """Return the experiments to run: one by id, the algorithm's whole sweep, or the --only subset of it."""
+    if args.exp_id:
+        known = find_experiment(args.exp_id, args.algo)
+        return [known or {"exp_id": args.exp_id, "description": "ad hoc run", "overrides": {}}]
+    return select_experiments(args.algo, args.only)
+
+
+def run_one(algo, experiment, extra_overrides, summary_path=None):
+    """Run one experiment entry with any command line overrides on top and print its result."""
+    overrides = {**experiment["overrides"], **extra_overrides}
+    print(f"\n=== {algo} {experiment['exp_id']}: {experiment['description']} ===")
+    result = run_experiment(algo, experiment["exp_id"], overrides, description=experiment["description"],
+                            summary_path=summary_path)
     print(f"done: {result['frames']} frames in {result['wall_time_s']:.1f}s, "
           f"val return final {result['val_final']['return_mean']:.2f}, best {result['val_best']['return_mean']:.2f}")
+
+
+def main():
+    """Run the experiments chosen on the command line, skipping finished ones when asked."""
+    args = parse_args()
+    if args.only and not args.sweep:
+        raise SystemExit("--only needs --sweep")
+    done = finished_exp_ids(args.algo) if args.skip_done else set()
+    for experiment in selected_experiments(args):
+        if experiment["exp_id"] in done:
+            print(f"skipping {experiment['exp_id']}, already in summary.csv")
+            continue
+        run_one(args.algo, experiment, cli_overrides(args), args.summary_path)
 
 
 if __name__ == "__main__":

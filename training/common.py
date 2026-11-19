@@ -15,11 +15,11 @@ VAL_SEEDS = range(500, 520)
 TEST_SEEDS = range(1000, 1020)
 EVAL_METRICS = (
     "return", "final_cash", "final_net_worth", "lost_per_day", "trust", "debt_lent", "defaults",
-    "invalid_rate", "hold_rate",
+    "invalid_rate", "hold_rate", "noop_rate",
 )
 HOLD_ACTION = ACTION_NAMES.index("hold")
 POLICY_KINDS = ("q", "logits")
-SUMMARY_TEST_METRICS = ("net_worth", "invalid_rate", "hold_rate", "trust", "lost_per_day")
+SUMMARY_TEST_METRICS = ("net_worth", "invalid_rate", "hold_rate", "noop_rate", "trust", "lost_per_day")
 SUMMARY_METRIC_KEYS = {"net_worth": "final_net_worth"}
 
 
@@ -45,7 +45,7 @@ def run_eval_episode(policy_fn, market, seed):
     obs, info = env.reset(seed=seed)
     env.action_space.seed(seed)
     stats = {"return": 0.0, "lost": 0, "trust_sum": 0.0, "debt_lent": 0.0, "defaults": 0.0,
-             "invalid": 0, "days": 0}
+             "invalid": 0, "noop": 0, "days": 0}
     action_counts = np.zeros(len(ACTION_NAMES))
     terminated = truncated = False
     while not (terminated or truncated):
@@ -63,6 +63,7 @@ def run_eval_episode(policy_fn, market, seed):
         "defaults": stats["defaults"],
         "invalid_rate": stats["invalid"] / stats["days"],
         "hold_rate": action_counts[HOLD_ACTION] / stats["days"],
+        "noop_rate": stats["noop"] / stats["days"],
         "bankrupt": bool(info["bankrupt"]),
         "action_counts": action_counts,
     }
@@ -76,6 +77,7 @@ def add_eval_day(stats, reward, info):
     stats["debt_lent"] += info["credit_given"]
     stats["defaults"] += info["defaults"]
     stats["invalid"] += int(info["invalid_action"])
+    stats["noop"] += int(info["noop"])
     stats["days"] += 1
 
 
@@ -223,14 +225,17 @@ def load_checkpoint(path, build_fn):
     return module, data
 
 
-def experiment_paths(exp_id, log_subdir, model_subdir, log_dir="logs", model_dir="models"):
-    """Return every file path one experiment writes, under logs/<log_subdir> and models/<model_subdir>."""
+def experiment_paths(exp_id, log_subdir, model_subdir, log_dir="logs", model_dir="models", summary_path=None):
+    """Return every file path one experiment writes, under logs/<log_subdir> and models/<model_subdir>.
+
+    summary_path replaces logs/summary.csv, so parallel sweep workers can each write their own file.
+    """
     log_folder = Path(log_dir) / log_subdir
     model_folder = Path(model_dir) / model_subdir
     return {
         "train": log_folder / f"{exp_id}_train.csv",
         "eval": log_folder / f"{exp_id}_eval.csv",
-        "summary": Path(log_dir) / "summary.csv",
+        "summary": Path(summary_path) if summary_path else Path(log_dir) / "summary.csv",
         "final": model_folder / f"{exp_id}_final.pt",
         "best": model_folder / f"{exp_id}_best.pt",
     }
@@ -281,6 +286,7 @@ def val_row(frames, result):
         "val_defaults_mean": result["defaults_mean"],
         "val_invalid_rate_mean": result["invalid_rate_mean"],
         "val_hold_rate_mean": result["hold_rate_mean"],
+        "val_noop_rate_mean": result["noop_rate_mean"],
     }
 
 
@@ -292,6 +298,7 @@ def val_sample_columns(result):
         "val_sample_net_worth_mean": result["final_net_worth_mean"],
         "val_sample_invalid_rate_mean": result["invalid_rate_mean"],
         "val_sample_hold_rate_mean": result["hold_rate_mean"],
+        "val_sample_noop_rate_mean": result["noop_rate_mean"],
     }
 
 
@@ -351,10 +358,10 @@ def summary_row(algo, exp_id, description, config, tracker, test_results):
     return row
 
 
-def finished_exp_ids(algo, log_dir="logs"):
-    """Return the exp_ids of one algorithm that already have a row in summary.csv."""
+def finished_exp_ids(algo=None, log_dir="logs"):
+    """Return the exp_ids that already have a row in summary.csv, for one algorithm or for all of them."""
     rows, _ = read_rows(Path(log_dir) / "summary.csv")
-    return {row["exp_id"] for row in rows if row.get("algo") == algo}
+    return {row["exp_id"] for row in rows if algo is None or row.get("algo") == algo}
 
 
 def finished_episode_returns(batch):

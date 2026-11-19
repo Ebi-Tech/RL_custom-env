@@ -37,7 +37,7 @@ from training.common import (
     set_seed,
     summary_row,
 )
-from training.experiments import DQN_EXPERIMENTS, find_experiment
+from training.experiments import find_experiment, select_experiments
 
 ALGO = "dqn"
 ACTIVATIONS = {"relu": nn.ReLU, "tanh": nn.Tanh}
@@ -198,16 +198,17 @@ def run_validation(agent, config, tracker, paths, val_seeds):
 
 
 def run_experiment(exp_id, overrides=None, log_dir="logs", model_dir="models", val_seeds=VAL_SEEDS,
-                   test_seeds=TEST_SEEDS, description=""):
+                   test_seeds=TEST_SEEDS, description="", summary_path=None):
     """Train one DQN agent with the defaults plus overrides, log everything and save the models.
 
     Validation seeds pick the best checkpoint during training; after training the final and the
     best networks are both scored on the test seeds. Returns the trained network, the results and
     the file paths, so a sweep can call it many times and tests can inspect what it wrote.
+    summary_path, when given, receives the summary row instead of logs/summary.csv.
     """
     config = merge_config(overrides)
     set_seed(config["seed"])
-    paths = experiment_paths(exp_id, ALGO, ALGO, log_dir, model_dir)
+    paths = experiment_paths(exp_id, ALGO, ALGO, log_dir, model_dir, summary_path)
     remove_old_logs(paths)
     env = make_env(config["market"], config["seed"])
     agent = build_agent(config, env)
@@ -250,6 +251,7 @@ def parse_args():
     parser.add_argument("--total-frames", type=int)
     parser.add_argument("--market", choices=["default", "harsh", "price_scale"])
     parser.add_argument("--seed", type=int)
+    parser.add_argument("--summary-path", help="write the summary row here instead of logs/summary.csv")
     return parser.parse_args()
 
 
@@ -262,22 +264,17 @@ def cli_overrides(args):
 def selected_experiments(args):
     """Return the experiments to run: one by id, the whole sweep, or the --only subset of it."""
     if args.exp_id:
-        known = find_experiment(args.exp_id)
+        known = find_experiment(args.exp_id, ALGO)
         return [known or {"exp_id": args.exp_id, "description": "ad hoc run", "overrides": {}}]
-    if not args.only:
-        return list(DQN_EXPERIMENTS)
-    wanted = [exp_id.strip() for exp_id in args.only.split(",") if exp_id.strip()]
-    unknown = [exp_id for exp_id in wanted if find_experiment(exp_id) is None]
-    if unknown:
-        raise SystemExit(f"Unknown experiment ids: {unknown}")
-    return [find_experiment(exp_id) for exp_id in wanted]
+    return select_experiments(ALGO, args.only)
 
 
-def run_one(experiment, extra_overrides):
+def run_one(experiment, extra_overrides, summary_path=None):
     """Run one experiment entry with any command line overrides on top and print its result."""
     overrides = {**experiment["overrides"], **extra_overrides}
     print(f"\n=== {experiment['exp_id']}: {experiment['description']} ===")
-    result = run_experiment(experiment["exp_id"], overrides, description=experiment["description"])
+    result = run_experiment(experiment["exp_id"], overrides, description=experiment["description"],
+                            summary_path=summary_path)
     print(f"done: {result['frames']} frames in {result['wall_time_s']:.1f}s, "
           f"val return final {result['val_final']['return_mean']:.2f}, best {result['val_best']['return_mean']:.2f}")
 
@@ -292,7 +289,7 @@ def main():
         if experiment["exp_id"] in done:
             print(f"skipping {experiment['exp_id']}, already in summary.csv")
             continue
-        run_one(experiment, cli_overrides(args))
+        run_one(experiment, cli_overrides(args), args.summary_path)
 
 
 if __name__ == "__main__":

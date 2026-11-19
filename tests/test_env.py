@@ -11,10 +11,12 @@ from environment.custom_env import (
     CHASE_DEBTS,
     CREDIT_OPEN,
     CREDIT_STRICT,
+    HIGH_BAND,
     HOLD,
     INDOMIE,
     LOOSE_RICE,
     LOWER_BAND,
+    NORMAL_BAND,
     OPEN_BAG,
     RAISE_BAND,
     RICE_BAG,
@@ -25,6 +27,9 @@ RESTOCK_INDOMIE_SMALL = 1
 FROZEN_RULE_SEED = 0
 FROZEN_RULE_RETURN = 87.03042346529378
 FROZEN_RULE_NET_WORTH = 1447904.2346529379
+EXPECTED_INVALID_PENALTY = 1.0
+ALWAYS_WALK_AWAY = (1.0, 1.0, 1.0)
+ALWAYS_AFFORD_HAGGLE = (2.0, 2.0)
 
 
 def make_quiet_env(seed=SEED):
@@ -146,6 +151,85 @@ def test_invalid_restock_is_penalised_and_changes_nothing():
     assert invalid_reward == pytest.approx(hold_reward - penalty)
     np.testing.assert_array_equal(invalid_env.stock, holding_env.stock)
     assert invalid_env.pending.sum() == 0
+
+
+def test_invalid_penalty_is_one():
+    """The invalid action penalty is 1.0, and an invalid restock scores exactly 1.0 below holding."""
+    holding_env = make_quiet_env()
+    invalid_env = make_quiet_env()
+    holding_env.cash = 0.0
+    invalid_env.cash = 0.0
+    _, hold_reward, _, _, _ = holding_env.step(HOLD)
+    _, invalid_reward, _, _, _ = invalid_env.step(RESTOCK_INDOMIE_SMALL)
+    assert make_config()["reward"]["invalid_action_penalty"] == EXPECTED_INVALID_PENALTY
+    assert invalid_reward == pytest.approx(hold_reward - EXPECTED_INVALID_PENALTY)
+
+
+def make_walkaway_env(band):
+    """Return a reset env where every fixed-price buyer walks away, set to the given price band.
+
+    Credit is never asked for and every haggler can afford the ask, so the price band changes
+    nothing else about the day: both bands see the same buyers, stock and random draws.
+    """
+    config = make_config()
+    config["pricing"]["walkaway_probs"] = ALWAYS_WALK_AWAY
+    config["haggle"]["buyer_max_range"] = ALWAYS_AFFORD_HAGGLE
+    config["credit"]["ask_prob"] = 0.0
+    env = ShopEnv(config=config)
+    env.reset(seed=SEED)
+    env.price_band = band
+    return env
+
+
+def test_high_band_walkaways_lower_trust():
+    """Fixed-price walk aways lower trust by the configured loss each at the high band, and not at the normal band."""
+    high_env = make_walkaway_env(HIGH_BAND)
+    normal_env = make_walkaway_env(NORMAL_BAND)
+    _, _, _, _, high_info = high_env.step(HOLD)
+    _, _, _, _, normal_info = normal_env.step(HOLD)
+    walkaways = high_info["price_walkaways"]
+    assert walkaways > 0
+    assert walkaways == normal_info["price_walkaways"]
+    trust = high_env.config["trust"]
+    loss = high_env.config["pricing"]["price_walkaway_trust_loss"] * walkaways
+    expected_gap = loss * (1 - trust["recovery_rate"])
+    assert normal_env.trust - high_env.trust == pytest.approx(expected_gap)
+    assert f"Lost {walkaways} buyers to high prices" in high_info["events"]
+    assert not any("high prices" in event for event in normal_info["events"])
+
+
+def test_noop_flag_marks_valid_actions_that_change_nothing():
+    """The noop flag is set for hold, a band move past the end, the credit policy already in place and a chase with no old debt."""
+    env = make_quiet_env()
+    old_age = env.config["debt"]["chase_min_age"] + 1
+    steps = [
+        (HOLD, True),
+        (RESTOCK_INDOMIE_SMALL, False),
+        (RAISE_BAND, False),
+        (RAISE_BAND, True),
+        (LOWER_BAND, False),
+        (LOWER_BAND, False),
+        (LOWER_BAND, True),
+        (CREDIT_STRICT, True),
+        (CREDIT_OPEN, False),
+        (CREDIT_OPEN, True),
+        (CHASE_DEBTS, True),
+    ]
+    for action, expected in steps:
+        _, _, _, _, info = env.step(action)
+        assert info["noop"] == expected, info["action_name"]
+    env.debts.append({"amount": 1000.0, "age": old_age})
+    _, _, _, _, info = env.step(CHASE_DEBTS)
+    assert not info["noop"]
+
+
+def test_invalid_action_is_not_a_noop():
+    """An invalid action is flagged invalid, not noop, so the two rates never count the same day."""
+    env = make_quiet_env()
+    env.cash = 0.0
+    _, _, _, _, info = env.step(RESTOCK_INDOMIE_SMALL)
+    assert info["invalid_action"]
+    assert not info["noop"]
 
 
 def test_restock_over_capacity_is_invalid_and_keeps_cash():

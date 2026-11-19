@@ -173,6 +173,7 @@ class ShopEnv(gymnasium.Env):
         return {
             "action_name": ACTION_NAMES[action],
             "invalid_action": False,
+            "noop": False,
             "chase": False,
             "customers": 0,
             "units_sold": np.zeros(NUM_SLOTS),
@@ -203,6 +204,7 @@ class ShopEnv(gymnasium.Env):
 
     def _apply_action(self, action, today):
         """Carry out the owner's decision for the day and return any restock order placed."""
+        today["noop"] = self._is_noop(action)
         order = np.zeros(NUM_SLOTS)
         if action in RESTOCK_ACTIONS:
             self._restock(action, order, today)
@@ -215,6 +217,30 @@ class ShopEnv(gymnasium.Env):
         elif action == CHASE_DEBTS:
             self._start_chase(today)
         return order
+
+    def _is_noop(self, action):
+        """Return whether a valid action would change nothing about the shop today.
+
+        That is holding, raising the band at high, lowering it at low, choosing the credit policy
+        already in place, or chasing when no debt is old enough to be chased. A no-op chase still
+        costs its trust loss; the flag only records that it reaches no debt.
+        """
+        if action == HOLD:
+            return True
+        if action == RAISE_BAND:
+            return self.price_band == HIGH_BAND
+        if action == LOWER_BAND:
+            return self.price_band == LOW_BAND
+        if action in (CREDIT_OPEN, CREDIT_STRICT):
+            return self.credit_open == (action == CREDIT_OPEN)
+        if action == CHASE_DEBTS:
+            return not self._has_chaseable_debt()
+        return False
+
+    def _has_chaseable_debt(self):
+        """Return whether any debt is older than the minimum age that chasing affects."""
+        min_age = self.config["debt"]["chase_min_age"]
+        return any(entry["age"] > min_age for entry in self.debts)
 
     def _restock(self, action, order, today):
         """Pay cash now for a batch that arrives tomorrow, or mark the action invalid if cash is short."""
