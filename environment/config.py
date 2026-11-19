@@ -149,6 +149,7 @@ BASE_CONFIG = {
     "pricing": {
         "band_multipliers": (0.92, 1.0, 1.08),
         "walkaway_probs": (0.02, 0.05, 0.20),
+        "price_walkaway_trust_loss": 0.003,
     },
     "haggle": {
         "buyer_max_range": (0.88, 1.05),
@@ -184,7 +185,7 @@ BASE_CONFIG = {
     "reward": {
         "money_unit": 10000,
         "lost_customer_penalty": 0.02,
-        "invalid_action_penalty": 0.2,
+        "invalid_action_penalty": 1.0,
         "final_debt_weight": 0.5,
         "bankruptcy_penalty": 10.0,
     },
