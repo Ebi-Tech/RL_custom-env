@@ -1,0 +1,47 @@
+
+=== a2c a2c_06: one step TD advantage, GAE lambda 0.0 ===
+frames    5040  val greedy   -59.00  sample     2.45  entropy 2.365     19.7s
+frames   10080  val greedy   -59.00  sample    -7.92  entropy 1.920     35.0s
+frames   15030  val greedy   -59.05  sample    -0.02  entropy 2.118     49.3s
+frames   20070  val greedy  -144.41  sample    29.82  entropy 2.274     64.2s
+frames   25020  val greedy  -143.79  sample    20.52  entropy 1.987     80.1s
+frames   30060  val greedy    22.35  sample    50.28  entropy 2.028     96.8s
+frames   35010  val greedy     7.23  sample    47.21  entropy 1.752    112.8s
+frames   40050  val greedy    33.30  sample    53.04  entropy 1.859    128.3s
+frames   45000  val greedy    32.10  sample    54.11  entropy 1.788    143.6s
+frames   50040  val greedy    18.99  sample    55.75  entropy 1.656    160.3s
+frames   55080  val greedy    11.36  sample    49.43  entropy 1.901    178.8s
+frames   60030  val greedy    35.20  sample    52.82  entropy 1.763    195.4s
+frames   65070  val greedy    51.50  sample    54.77  entropy 1.844    211.6s
+frames   70020  val greedy    22.53  sample    55.25  entropy 1.668    227.3s
+frames   75060  val greedy    45.44  sample    55.31  entropy 1.855    242.8s
+frames   80010  val greedy    32.11  sample    60.99  entropy 1.583    258.0s
+frames   85050  val greedy    52.99  sample    60.14  entropy 1.634    276.5s
+frames   90000  val greedy    58.04  sample    65.04  entropy 1.663    293.9s
+frames   95040  val greedy    37.71  sample    53.50  entropy 1.604    311.6s
+frames  100080  val greedy    45.46  sample    57.01  entropy 1.393    328.9s
+frames  105030  val greedy    57.77  sample    60.38  entropy 1.549    344.6s
+frames  110070  val greedy    51.61  sample    62.71  entropy 1.576    359.2s
+frames  115020  val greedy    60.37  sample    64.04  entropy 1.561    373.6s
+frames  120060  val greedy    60.56  sample    66.24  entropy 1.510    388.3s
+frames  125010  val greedy    64.28  sample    66.04  entropy 1.336    402.8s
+frames  130050  val greedy    63.72  sample    68.52  entropy 1.398    418.6s
+frames  135000  val greedy    61.19  sample    68.07  entropy 1.378    434.5s
+frames  140040  val greedy    61.15  sample    65.76  entropy 1.523    451.7s
+frames  145080  val greedy    64.27  sample    68.88  entropy 1.500    467.6s
+frames  150030  val greedy    76.97  sample    74.02  entropy 1.478    481.7s
+frames  155070  val greedy    69.83  sample    71.74  entropy 1.427    495.9s
+frames  160020  val greedy    69.61  sample    75.69  entropy 1.378    509.6s
+frames  165060  val greedy    69.83  sample    71.27  entropy 1.441    524.4s
+frames  170010  val greedy    55.35  sample    61.16  entropy 1.387    538.6s
+frames  175050  val greedy    62.02  sample    70.26  entropy 1.342    553.1s
+frames  180000  val greedy    77.78  sample    75.26  entropy 1.488    567.2s
+frames  185040  val greedy    69.96  sample    71.38  entropy 1.460    581.8s
+frames  190080  val greedy    80.91  sample    78.97  entropy 1.428    596.1s
+frames  195030  val greedy    82.81  sample    83.44  entropy 1.406    610.3s
+frames  200070  val greedy    83.41  sample    82.86  entropy 1.440    625.0s
+test final        return    82.70  net worth     1498532  invalid 0.040  hold 0.000  bankrupt 0  top: restock_soap_small 0.293, open_rice_bag 0.223, restock_indomie_small 0.168, raise_price_band 0.144
+test best         return    82.70  net worth     1498532  invalid 0.040  hold 0.000  bankrupt 0  top: restock_soap_small 0.293, open_rice_bag 0.223, restock_indomie_small 0.168, raise_price_band 0.144
+test final_sample return    84.53  net worth     1527653  invalid 0.046  hold 0.002  bankrupt 0  top: open_rice_bag 0.239, restock_soap_small 0.231, restock_indomie_small 0.149, restock_rice_large 0.143
+test best_sample  return    84.53  net worth     1527653  invalid 0.046  hold 0.002  bankrupt 0  top: open_rice_bag 0.239, restock_soap_small 0.231, restock_indomie_small 0.149, restock_rice_large 0.143
+done: 200070 frames in 631.8s, val return final 83.41, best 83.41

@@ -1,0 +1,47 @@
+
+=== a2c a2c_01: baseline, default config ===
+frames    5040  val greedy   -91.28  sample    17.10  entropy 2.516     12.1s
+frames   10080  val greedy   -88.25  sample    24.51  entropy 2.453     24.9s
+frames   15030  val greedy  -145.27  sample    32.53  entropy 2.299     37.8s
+frames   20070  val greedy  -142.70  sample    35.90  entropy 2.257     52.9s
+frames   25020  val greedy  -126.69  sample    33.83  entropy 2.091     67.3s
+frames   30060  val greedy   -87.48  sample    36.61  entropy 2.096     81.5s
+frames   35010  val greedy   -97.78  sample    42.26  entropy 2.091     95.4s
+frames   40050  val greedy  -141.77  sample    42.10  entropy 2.113    110.1s
+frames   45000  val greedy     8.33  sample    46.43  entropy 2.011    125.2s
+frames   50040  val greedy    57.67  sample    50.07  entropy 1.954    141.5s
+frames   55080  val greedy    11.17  sample    43.59  entropy 2.016    157.8s
+frames   60030  val greedy    79.20  sample    52.67  entropy 2.002    173.6s
+frames   65070  val greedy    84.95  sample    52.81  entropy 1.960    190.9s
+frames   70020  val greedy    90.12  sample    58.42  entropy 1.853    207.2s
+frames   75060  val greedy    75.02  sample    59.82  entropy 1.784    224.2s
+frames   80010  val greedy    63.71  sample    55.31  entropy 1.875    239.9s
+frames   85050  val greedy    92.98  sample    61.46  entropy 1.671    255.9s
+frames   90000  val greedy    95.16  sample    66.15  entropy 1.797    271.3s
+frames   95040  val greedy    94.03  sample    64.94  entropy 1.602    286.3s
+frames  100080  val greedy    98.77  sample    63.15  entropy 1.569    303.4s
+frames  105030  val greedy    68.32  sample    65.92  entropy 1.622    319.0s
+frames  110070  val greedy    81.83  sample    69.37  entropy 1.651    334.2s
+frames  115020  val greedy    72.56  sample    69.81  entropy 1.605    349.0s
+frames  120060  val greedy    80.22  sample    73.25  entropy 1.596    364.6s
+frames  125010  val greedy    90.50  sample    71.93  entropy 1.515    380.8s
+frames  130050  val greedy    84.04  sample    76.62  entropy 1.666    396.6s
+frames  135000  val greedy    73.98  sample    69.55  entropy 1.534    413.0s
+frames  140040  val greedy    94.04  sample    73.86  entropy 1.474    428.8s
+frames  145080  val greedy    86.39  sample    76.79  entropy 1.463    445.4s
+frames  150030  val greedy    85.36  sample    77.56  entropy 1.434    462.7s
+frames  155070  val greedy    82.48  sample    81.46  entropy 1.351    478.7s
+frames  160020  val greedy    83.59  sample    80.27  entropy 1.401    495.5s
+frames  165060  val greedy    87.21  sample    79.51  entropy 1.303    513.2s
+frames  170010  val greedy    86.76  sample    76.91  entropy 1.318    532.3s
+frames  175050  val greedy    91.44  sample    81.53  entropy 1.301    551.7s
+frames  180000  val greedy    90.09  sample    78.02  entropy 1.272    569.2s
+frames  185040  val greedy    85.58  sample    82.85  entropy 1.377    587.3s
+frames  190080  val greedy    88.61  sample    80.93  entropy 1.278    603.5s
+frames  195030  val greedy    82.75  sample    80.80  entropy 1.296    619.0s
+frames  200070  val greedy    87.97  sample    85.54  entropy 1.217    635.1s
+test final        return    89.29  net worth     1545909  invalid 0.004  hold 0.000  bankrupt 0  top: raise_price_band 0.262, open_rice_bag 0.251, restock_soap_small 0.224, restock_rice_large 0.172
+test best         return    98.38  net worth     1650771  invalid 0.021  hold 0.000  bankrupt 0  top: open_rice_bag 0.314, restock_soap_small 0.309, restock_rice_large 0.242, restock_indomie_large 0.134
+test final_sample return    80.42  net worth     1506210  invalid 0.044  hold 0.001  bankrupt 0  top: open_rice_bag 0.276, restock_soap_small 0.231, raise_price_band 0.207, restock_rice_large 0.158
+test best_sample  return    61.69  net worth     1426331  invalid 0.169  hold 0.003  bankrupt 0  top: open_rice_bag 0.296, restock_soap_small 0.276, restock_rice_large 0.126, restock_indomie_large 0.124
+done: 200070 frames in 643.4s, val return final 87.97, best 98.77

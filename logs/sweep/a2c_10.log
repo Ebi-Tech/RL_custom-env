@@ -1,0 +1,47 @@
+
+=== a2c a2c_10: longer rollouts, 450 frames ===
+frames    5400  val greedy   -58.55  sample     9.24  entropy 2.560     14.0s
+frames   10350  val greedy   -26.45  sample    13.32  entropy 2.547     27.3s
+frames   15300  val greedy   -92.00  sample    20.19  entropy 2.521     40.6s
+frames   20250  val greedy   -91.22  sample    22.91  entropy 2.488     54.6s
+frames   25200  val greedy   -82.32  sample    26.70  entropy 2.474     68.6s
+frames   30150  val greedy  -128.28  sample    29.72  entropy 2.457     83.0s
+frames   35100  val greedy  -145.19  sample    34.91  entropy 2.431     97.4s
+frames   40050  val greedy  -145.27  sample    34.02  entropy 2.390    112.8s
+frames   45000  val greedy  -145.27  sample    34.76  entropy 2.317    127.3s
+frames   50400  val greedy  -145.27  sample    37.19  entropy 2.322    142.6s
+frames   55350  val greedy  -145.27  sample    38.15  entropy 2.336    157.3s
+frames   60300  val greedy  -145.27  sample    39.75  entropy 2.294    172.3s
+frames   65250  val greedy  -145.27  sample    41.88  entropy 2.250    185.9s
+frames   70200  val greedy  -145.18  sample    40.39  entropy 2.253    199.0s
+frames   75150  val greedy  -139.77  sample    42.63  entropy 2.259    212.0s
+frames   80100  val greedy  -118.30  sample    40.80  entropy 2.265    225.9s
+frames   85050  val greedy  -132.54  sample    40.60  entropy 2.212    239.7s
+frames   90000  val greedy  -123.40  sample    43.04  entropy 2.171    253.7s
+frames   95400  val greedy  -136.85  sample    44.35  entropy 2.135    268.7s
+frames  100350  val greedy    29.47  sample    41.01  entropy 2.184    283.0s
+frames  105300  val greedy    31.85  sample    45.50  entropy 2.162    297.2s
+frames  110250  val greedy  -138.33  sample    43.73  entropy 2.068    311.7s
+frames  115200  val greedy   -40.84  sample    45.01  entropy 2.101    326.4s
+frames  120150  val greedy   -15.10  sample    45.05  entropy 2.125    341.9s
+frames  125100  val greedy   -15.49  sample    48.63  entropy 2.082    357.3s
+frames  130050  val greedy   -25.59  sample    49.31  entropy 2.095    373.0s
+frames  135000  val greedy   -87.21  sample    49.30  entropy 2.114    388.2s
+frames  140400  val greedy    18.83  sample    47.23  entropy 2.139    404.8s
+frames  145350  val greedy    19.89  sample    50.73  entropy 2.159    420.4s
+frames  150300  val greedy    28.09  sample    50.89  entropy 2.152    436.1s
+frames  155250  val greedy    -7.35  sample    50.98  entropy 2.147    451.1s
+frames  160200  val greedy    -9.62  sample    50.97  entropy 2.143    465.9s
+frames  165150  val greedy    30.48  sample    50.68  entropy 2.168    481.4s
+frames  170100  val greedy    20.93  sample    52.05  entropy 2.148    497.0s
+frames  175050  val greedy    33.62  sample    53.01  entropy 2.165    512.7s
+frames  180000  val greedy    26.56  sample    52.61  entropy 2.074    527.8s
+frames  185400  val greedy    28.54  sample    53.62  entropy 2.034    544.3s
+frames  190350  val greedy    45.75  sample    58.54  entropy 2.129    559.8s
+frames  195300  val greedy    41.75  sample    58.05  entropy 2.104    575.6s
+frames  200250  val greedy    43.38  sample    57.80  entropy 2.085    590.9s
+test final        return    45.62  net worth     1262718  invalid 0.049  hold 0.000  bankrupt 0  top: restock_rice_small 0.554, open_rice_bag 0.294, restock_indomie_large 0.106, restock_rice_large 0.035
+test best         return    49.84  net worth     1301288  invalid 0.052  hold 0.000  bankrupt 0  top: restock_indomie_small 0.369, open_rice_bag 0.294, restock_rice_large 0.171, restock_rice_small 0.164
+test final_sample return    57.00  net worth     1366142  invalid 0.136  hold 0.007  bankrupt 0  top: open_rice_bag 0.254, restock_rice_small 0.154, restock_rice_large 0.103, restock_indomie_small 0.097
+test best_sample  return    55.03  net worth     1353020  invalid 0.144  hold 0.008  bankrupt 0  top: open_rice_bag 0.240, restock_rice_small 0.123, restock_indomie_small 0.122, restock_rice_large 0.111
+done: 200250 frames in 598.4s, val return final 43.38, best 45.75
