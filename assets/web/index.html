@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Beyond Sale Shop</title>
+  <link rel="stylesheet" href="/assets/web/style.css">
+  <script type="importmap">
+    {"imports": {"three": "/assets/web/vendor/three.module.js", "three/addons/": "/assets/web/vendor/"}}
+  </script>
+</head>
+<body>
+  <div id="scene"><div id="labels"></div></div>
+
+  <header id="topbar" class="card">
+    <div class="brand">
+      <span class="brand-mark"></span>
+      <span>Beyond Sale Shop</span>
+    </div>
+    <div class="day-box">
+      <div class="day-text"><span id="day-num">Day 0</span> <span class="muted">of <span id="day-total">90</span></span></div>
+      <div class="progress"><div id="day-progress"></div></div>
+    </div>
+    <div class="chip" id="policy-chip">policy</div>
+    <div class="controls">
+      <button id="play-btn" class="btn primary" type="button">Pause</button>
+      <div class="segmented" id="speed-group">
+        <button type="button" data-speed="1">1x</button>
+        <button type="button" data-speed="2">2x</button>
+        <button type="button" data-speed="4">4x</button>
+      </div>
+      <label class="seed">Seed <input id="seed-input" type="number" min="0" step="1"></label>
+      <button id="restart-btn" class="btn" type="button">Restart</button>
+    </div>
+  </header>
+
+  <aside id="panel" class="card">
+    <section>
+      <h2>Today's action</h2>
+      <div id="action-now" class="action-now">waiting</div>
+      <ul id="action-list" class="action-list"></ul>
+    </section>
+    <section class="stats">
+      <div class="stat"><span>Reward today</span><strong id="stat-reward">0.00</strong></div>
+      <div class="stat"><span>Cumulative return</span><strong id="stat-return">0.00</strong></div>
+      <div class="stat"><span>Cash</span><strong id="stat-cash">-</strong></div>
+      <div class="stat"><span>Net worth</span><strong id="stat-networth">-</strong></div>
+      <div class="stat"><span>Unpaid debt</span><strong id="stat-debt">-</strong></div>
+      <div class="stat sub"><span>recent / old</span><span id="stat-debt-split">-</span></div>
+    </section>
+    <section>
+      <div class="trust-head"><span>Customer trust</span><strong id="trust-value">-</strong></div>
+      <div class="trust-bar"><div id="trust-fill"></div></div>
+      <div class="status-row">
+        <span class="chip band-normal" id="band-chip">Price normal</span>
+        <span class="chip credit-strict" id="credit-chip">Cash only</span>
+      </div>
+    </section>
+  </aside>
+
+  <section id="log" class="card">
+    <h2>Shop log</h2>
+    <div id="log-list"></div>
+  </section>
+
+  <footer id="strip" class="card">
+    <div class="compare">
+      <div class="who agent"><span class="swatch"></span><span id="agent-name">Agent</span></div>
+      <div class="num"><span>Return</span><strong id="agent-return">0.00</strong></div>
+      <div class="num"><span>Net worth</span><strong id="agent-networth">-</strong></div>
+    </div>
+    <canvas id="chart"></canvas>
+    <div class="compare">
+      <div class="who rule"><span class="swatch"></span><span>Rule shop</span></div>
+      <div class="num"><span>Return</span><strong id="rule-return">0.00</strong></div>
+      <div class="num"><span>Net worth</span><strong id="rule-networth">-</strong></div>
+    </div>
+  </footer>
+
+  <div id="end-card" class="card" hidden>
+    <h2>Episode over</h2>
+    <div id="end-body"></div>
+    <button id="end-restart" class="btn primary" type="button">Watch again</button>
+  </div>
+
+  <div id="status" hidden></div>
+
+  <script type="module" src="/assets/web/app.js"></script>
+</body>
+</html>
