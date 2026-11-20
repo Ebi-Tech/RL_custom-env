@@ -1,9 +1,10 @@
-"""Watch an agent run the Beyond Sale Shop in a 3D browser view, streamed live from the environment.
+"""Watch five shops trade side by side on a 3D market street, streamed live from the environment.
 
-Run:  uv run play.py [--policy rule|random|<checkpoint.pt>] [--seed 1000] [--speed 1] [--no-browser]
+Run:  uv run play.py [--seed 1000] [--market default|harsh] [--speed 1] [--no-browser]
 
-A small standard-library HTTP server serves the web page and streams one Server-Sent Event per
-trading day. The same days are printed in this terminal as they stream.
+The four trained agents in models/best/ and Mama Ngozi, a typical owner following the rule
+policy, run the same 90 days in the same market. A small standard-library HTTP server serves
+the web page and streams one Server-Sent Event per day; each day is also printed here.
 """
 import argparse
 import json
@@ -16,23 +17,25 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
-from environment.rendering import DEFAULT_SEED, EpisodeRunner, episode_meta, load_policy, to_jsonable
+from environment.rendering import (
+    DEFAULT_MODEL_DIR,
+    DEFAULT_SEED,
+    MARKETS,
+    TYPICAL_OWNER,
+    MarketRunner,
+    load_shops,
+    market_meta,
+    to_jsonable,
+)
 
 ROOT = Path(__file__).resolve().parent
 ASSETS_DIR = ROOT / "assets"
 INDEX_PAGE = ASSETS_DIR / "web" / "index.html"
-DEFAULT_CHECKPOINT = ROOT / "models" / "best" / "best_agent.pt"
 DEFAULT_PORT = 8765
 HOST = "127.0.0.1"
-SECONDS_PER_DAY_AT_1X = 2.0
+SECONDS_PER_DAY_AT_1X = 8.0
 MAX_SPEED = 100000.0
-MARKETS = ("default", "harsh", "price_scale")
 CONTENT_TYPES = {".js": "text/javascript", ".css": "text/css", ".html": "text/html", ".json": "application/json"}
-
-
-def default_policy_spec():
-    """Return the best saved agent when there is one, else the rule policy."""
-    return str(DEFAULT_CHECKPOINT) if DEFAULT_CHECKPOINT.exists() else "rule"
 
 
 def money(value):
@@ -40,31 +43,30 @@ def money(value):
     return f"{value:,.0f}"
 
 
-def day_line(frame):
-    """Return the one-line terminal summary of a streamed day."""
-    state = frame["state"]
-    return (
-        f"day {frame['day']:>3}  {frame['action_label']:<24} r {frame['reward']:>+7.2f}  "
-        f"ret {frame['cumulative_return']:>8.2f}  cash {money(state['cash']):>10}  "
-        f"nw {money(frame['net_worth']):>10}  trust {state['trust']:.2f}  band {state['price_band']:<6} "
-        f"credit {state['credit_policy']:<6} lost {frame['lost_customers']:>2}  "
-        f"| rule ret {frame['rule']['cumulative_return']:>8.2f}"
-    )
+def day_block(frame):
+    """Return the compact terminal block of one market day: one line per shop."""
+    lines = [f"day {frame['day']:>3}  customers {frame['total_customers']:>4}  leader "
+             f"{frame['leaderboard'][0]['name']}"]
+    for shop in frame["shops"]:
+        lines.append(
+            f"   {shop['name'][:30]:<30} {shop['action_label']:<24} ret {shop['cumulative_return']:>8.2f}  "
+            f"nw {money(shop['net_worth']):>10}  trust {shop['trust']:.2f}  lost {shop['turned_away']:>2}"
+        )
+    return "\n".join(lines)
 
 
-def summary_block(summary, policy_name):
-    """Return the end of episode comparison of the agent and the rule shop as printable text."""
-    agent, rule = summary["agent"], summary["rule"]
-    rows = [
-        ("return", f"{agent['return']:.2f}", f"{rule['return']:.2f}"),
-        ("net worth", money(agent["net_worth"]), money(rule["net_worth"])),
-        ("cash", money(agent["cash"]), money(rule["cash"])),
-        ("unpaid debt", money(agent["debt"]), money(rule["debt"])),
-        ("trust", f"{agent['trust']:.2f}", f"{rule['trust']:.2f}"),
-    ]
-    lines = [f"\nEpisode over: seed {summary['seed']}, {summary['days']} days, end: {summary['end_reason']}",
-             f"  {'':<12} {policy_name:>14} {'rule shop':>14}"]
-    lines += [f"  {name:<12} {mine:>14} {theirs:>14}" for name, mine, theirs in rows]
+def final_leaderboard(summary):
+    """Return the end of episode leaderboard with each shop's difference from Mama Ngozi."""
+    lines = [f"\nFinal leaderboard: seed {summary['seed']}, market {summary['market']}, {summary['days']} days",
+             f"  {'#':<3}{'shop':<34}{'net worth':>12}{'vs Mama':>12}{'return':>9}{'vs Mama':>9}"
+             f"{'turned away':>13}{'bad debt':>11}"]
+    for row in summary["leaderboard"]:
+        lines.append(
+            f"  {row['rank']:<3}{row['name'][:33]:<34}{money(row['net_worth']):>12}"
+            f"{row['net_worth_vs_owner']:>+12,.0f}{row['cumulative_return']:>9.2f}{row['return_vs_owner']:>+9.2f}"
+            f"{row['turned_away_total']:>13}{money(row['bad_debt_total']):>11}"
+        )
+    lines.append("  Ran the same 90 days in the same market.")
     return "\n".join(lines)
 
 
@@ -74,21 +76,21 @@ def sse_message(data, event=None):
     return f"{head}data: {json.dumps(to_jsonable(data))}\n\n".encode()
 
 
-def query_number(query, name, default, kind):
-    """Read one number from a parsed query string, falling back to the default when missing or bad."""
+def query_value(query, name, default, kind):
+    """Read one value from a parsed query string, falling back to the default when missing or bad."""
     try:
         return kind(query.get(name, [default])[0])
     except (TypeError, ValueError):
         return default
 
 
-class ShopHandler(BaseHTTPRequestHandler):
-    """Serve the web page, its static files, the episode metadata and the live day stream."""
+class MarketHandler(BaseHTTPRequestHandler):
+    """Serve the web page, its static files, the market metadata and the live day stream."""
 
     settings = {}
 
     def log_message(self, format, *args):
-        """Keep the terminal for the day lines instead of one log line per request."""
+        """Keep the terminal for the day blocks instead of one log line per request."""
 
     def do_GET(self):
         """Route one GET request to the page, a static file, the metadata or the stream."""
@@ -98,7 +100,8 @@ class ShopHandler(BaseHTTPRequestHandler):
         elif url.path.startswith("/assets/"):
             self.send_static(url.path[len("/assets/"):])
         elif url.path == "/api/meta":
-            self.send_json(episode_meta(self.settings["policy_name"], self.settings["seed"], self.settings["market"]))
+            settings = self.settings
+            self.send_json(market_meta(settings["shops"], settings["seed"], settings["market"]))
         elif url.path == "/api/stream":
             self.send_stream(parse_qs(url.query))
         else:
@@ -133,15 +136,19 @@ class ShopHandler(BaseHTTPRequestHandler):
         self.wfile.write(body)
 
     def send_stream(self, query):
-        """Stream the episode as Server-Sent Events, one per day, paced by the speed in the query.
+        """Stream the market episode as Server-Sent Events, one per day, paced by the speed in the query.
 
         from_day lets the page resume after a pause or a speed change: earlier days are replayed
         silently, so the episode is identical to an unbroken run.
         """
-        seed = query_number(query, "seed", self.settings["seed"], int)
-        speed = min(max(query_number(query, "speed", self.settings["speed"], float), 0.01), MAX_SPEED)
-        from_day = max(query_number(query, "from_day", 1, int), 1)
-        runner = EpisodeRunner(self.settings["policy_fn"], seed, self.settings["market"])
+        seed = query_value(query, "seed", self.settings["seed"], int)
+        market = query_value(query, "market", self.settings["market"], str)
+        if market not in MARKETS:
+            self.send_error(400, f"market must be one of {MARKETS}")
+            return
+        speed = min(max(query_value(query, "speed", self.settings["speed"], float), 0.01), MAX_SPEED)
+        from_day = max(query_value(query, "from_day", 1, int), 1)
+        runner = MarketRunner(self.settings["shops"], seed, market)
         self.send_response(200)
         self.send_header("Content-Type", "text/event-stream")
         self.send_header("Cache-Control", "no-cache")
@@ -154,17 +161,17 @@ class ShopHandler(BaseHTTPRequestHandler):
     def stream_days(self, runner, from_day, delay):
         """Write the init event, then each day from from_day onward, then the end summary."""
         if from_day == 1:
-            print(f"\n--- streaming seed {runner.seed}, policy {self.settings['policy_name']} ---", flush=True)
+            print(f"\n--- market stream: seed {runner.seed}, market {runner.market} ---", flush=True)
             self.write_event(runner.initial_frame(), "init")
         for frame in runner.frames():
             if frame["day"] < from_day:
                 continue
             self.write_event(frame)
-            print(day_line(frame), flush=True)
+            print(day_block(frame), flush=True)
             time.sleep(delay)
         summary = runner.summary()
         self.write_event(summary, "end")
-        print(summary_block(summary, self.settings["policy_name"]), flush=True)
+        print(final_leaderboard(summary), flush=True)
 
     def write_event(self, data, event=None):
         """Send one event and flush it so the browser receives it at once."""
@@ -172,12 +179,10 @@ class ShopHandler(BaseHTTPRequestHandler):
         self.wfile.flush()
 
 
-def make_server(policy_spec="rule", seed=DEFAULT_SEED, market="default", speed=1.0, port=DEFAULT_PORT):
-    """Build the HTTP server for one policy, without starting it; port 0 picks a free port."""
-    policy_name, policy_fn = load_policy(policy_spec)
-    handler = type("ConfiguredShopHandler", (ShopHandler,), {})
-    handler.settings = {"policy_name": policy_name, "policy_fn": policy_fn, "seed": seed, "market": market,
-                        "speed": speed}
+def make_server(seed=DEFAULT_SEED, market="default", speed=1.0, port=DEFAULT_PORT, model_dir=DEFAULT_MODEL_DIR):
+    """Load the five shops and build the HTTP server, without starting it; port 0 picks a free port."""
+    handler = type("ConfiguredMarketHandler", (MarketHandler,), {})
+    handler.settings = {"shops": load_shops(model_dir), "seed": seed, "market": market, "speed": speed}
     server = ThreadingHTTPServer((HOST, port), handler)
     server.daemon_threads = True
     return server
@@ -185,25 +190,33 @@ def make_server(policy_spec="rule", seed=DEFAULT_SEED, market="default", speed=1
 
 def parse_args(argv=None):
     """Read the play.py command line options."""
-    parser = argparse.ArgumentParser(description="Watch the Beyond Sale Shop in a live 3D browser view.")
-    parser.add_argument("--policy", default=None,
-                        help="rule, random, or a checkpoint path (default: models/best/best_agent.pt, else rule)")
+    parser = argparse.ArgumentParser(description="Watch five shops trade on a live 3D market street.")
     parser.add_argument("--seed", type=int, default=DEFAULT_SEED, help="episode seed (default 1000, a test seed)")
     parser.add_argument("--market", choices=MARKETS, default="default")
-    parser.add_argument("--speed", type=float, default=1.0, help="1 means 2 seconds per day")
+    parser.add_argument("--speed", type=float, default=1.0, help="1 means 8 seconds per day")
     parser.add_argument("--port", type=int, default=DEFAULT_PORT)
+    parser.add_argument("--models", default=str(DEFAULT_MODEL_DIR), help="folder with dqn.pt, reinforce.pt, a2c.pt, ppo.pt")
     parser.add_argument("--no-browser", action="store_true", help="do not open the browser")
     return parser.parse_args(argv)
+
+
+def describe_shops(shops):
+    """Return one line per shop saying what drives it."""
+    lines = []
+    for shop in shops:
+        driver = "rule_policy (placeholder)" if shop["placeholder"] else (
+            "rule_policy" if shop["kind"] == "rule" else f"{shop['checkpoint']} ({shop['score_label']})")
+        lines.append(f"  {shop['name']:<34} {driver}")
+    return "\n".join(lines)
 
 
 def main(argv=None):
     """Start the server, open the browser unless asked not to, and serve until Ctrl+C."""
     args = parse_args(argv)
-    policy_spec = args.policy or default_policy_spec()
-    server = make_server(policy_spec, args.seed, args.market, args.speed, args.port)
-    url = f"http://{HOST}:{server.server_address[1]}/?seed={args.seed}&speed={args.speed:g}"
-    print(f"Beyond Sale Shop: policy {server.RequestHandlerClass.settings['policy_name']}, seed {args.seed}, "
-          f"market {args.market}")
+    server = make_server(args.seed, args.market, args.speed, args.port, args.models)
+    url = f"http://{HOST}:{server.server_address[1]}/?seed={args.seed}&speed={args.speed:g}&market={args.market}"
+    print(f"Kimironko Market, Nigerian Provisions Lane: seed {args.seed}, market {args.market}")
+    print(describe_shops(server.RequestHandlerClass.settings["shops"]))
     print(f"Open {url}   (Ctrl+C to stop)", flush=True)
     if not args.no_browser:
         threading.Timer(0.5, webbrowser.open, args=(url,)).start()

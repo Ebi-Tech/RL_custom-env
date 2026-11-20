@@ -3,7 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Beyond Sale Shop</title>
+  <title>Kimironko Market Street</title>
+  <link rel="icon" href="data:,">
   <link rel="stylesheet" href="/assets/web/style.css">
   <script type="importmap">
     {"imports": {"three": "/assets/web/vendor/three.module.js", "three/addons/": "/assets/web/vendor/"}}
@@ -12,79 +13,81 @@
 <body>
   <div id="scene"><div id="labels"></div></div>
 
-  <header id="topbar" class="card">
-    <div class="brand">
-      <span class="brand-mark"></span>
-      <span>Beyond Sale Shop</span>
-    </div>
+  <header id="topbar" class="card hud">
+    <div class="brand"><span class="brand-mark"></span><span>Kimironko Market</span><span class="muted">Nigerian Provisions Lane</span></div>
     <div class="day-box">
-      <div class="day-text"><span id="day-num">Day 0</span> <span class="muted">of <span id="day-total">90</span></span></div>
+      <div class="day-text"><span id="day-num">Day 0</span> <span class="muted">of <span id="day-total">90</span></span>
+        <span id="day-phase" class="phase">Morning</span></div>
       <div class="progress"><div id="day-progress"></div></div>
     </div>
-    <div class="chip" id="policy-chip">policy</div>
     <div class="controls">
       <button id="play-btn" class="btn primary" type="button">Pause</button>
       <div class="segmented" id="speed-group">
-        <button type="button" data-speed="1">1x</button>
-        <button type="button" data-speed="2">2x</button>
-        <button type="button" data-speed="4">4x</button>
+        <button type="button" data-speed="1">1x</button><button type="button" data-speed="2">2x</button><button type="button" data-speed="4">4x</button><button type="button" data-speed="8">8x</button>
       </div>
-      <label class="seed">Seed <input id="seed-input" type="number" min="0" step="1"></label>
+      <label class="field">Seed <input id="seed-input" type="number" min="0" step="1"></label>
+      <label class="field">Market
+        <select id="market-select"><option value="default">default</option><option value="harsh">harsh</option></select>
+      </label>
       <button id="restart-btn" class="btn" type="button">Restart</button>
+      <div class="segmented" id="camera-group">
+        <button type="button" data-mode="overview" class="active">Overview</button><button type="button" data-mode="walk">Walk</button><button type="button" data-mode="tour">Tour</button>
+      </div>
+      <button id="quality-btn" class="btn" type="button">Quality: High</button>
+      <button id="sound-btn" class="btn" type="button">Sound: Off</button>
+      <button id="help-btn" class="btn" type="button" aria-label="Keys">?</button>
     </div>
   </header>
 
-  <aside id="panel" class="card">
-    <section>
-      <h2>Today's action</h2>
-      <div id="action-now" class="action-now">waiting</div>
-      <ul id="action-list" class="action-list"></ul>
-    </section>
-    <section class="stats">
-      <div class="stat"><span>Reward today</span><strong id="stat-reward">0.00</strong></div>
-      <div class="stat"><span>Cumulative return</span><strong id="stat-return">0.00</strong></div>
-      <div class="stat"><span>Cash</span><strong id="stat-cash">-</strong></div>
-      <div class="stat"><span>Net worth</span><strong id="stat-networth">-</strong></div>
-      <div class="stat"><span>Unpaid debt</span><strong id="stat-debt">-</strong></div>
-      <div class="stat sub"><span>recent / old</span><span id="stat-debt-split">-</span></div>
-    </section>
-    <section>
-      <div class="trust-head"><span>Customer trust</span><strong id="trust-value">-</strong></div>
-      <div class="trust-bar"><div id="trust-fill"></div></div>
-      <div class="status-row">
-        <span class="chip band-normal" id="band-chip">Price normal</span>
-        <span class="chip credit-strict" id="credit-chip">Cash only</span>
-      </div>
-    </section>
+  <aside id="right" class="card hud">
+    <h2>Leaderboard <span class="muted">net worth</span></h2>
+    <div class="board-head"><span>#</span><span></span><span>Shop</span><span>Worth</span><span>Ret</span><span>vs Mama</span></div>
+    <div id="board"></div>
+    <h2 class="chart-title">Net worth over 90 days</h2>
+    <canvas id="chart"></canvas>
+    <div id="chart-legend"></div>
   </aside>
 
-  <section id="log" class="card">
-    <h2>Shop log</h2>
-    <div id="log-list"></div>
-  </section>
+  <section id="cards" class="hud"></section>
 
-  <footer id="strip" class="card">
-    <div class="compare">
-      <div class="who agent"><span class="swatch"></span><span id="agent-name">Agent</span></div>
-      <div class="num"><span>Return</span><strong id="agent-return">0.00</strong></div>
-      <div class="num"><span>Net worth</span><strong id="agent-networth">-</strong></div>
-    </div>
-    <canvas id="chart"></canvas>
-    <div class="compare">
-      <div class="who rule"><span class="swatch"></span><span>Rule shop</span></div>
-      <div class="num"><span>Return</span><strong id="rule-return">0.00</strong></div>
-      <div class="num"><span>Net worth</span><strong id="rule-networth">-</strong></div>
-    </div>
-  </footer>
+  <aside id="shop-panel" class="card hud" hidden>
+    <div class="panel-head"><span class="panel-dot"></span><h2 id="panel-name">Shop</h2>
+      <button id="panel-close" class="btn small" type="button">Esc</button></div>
+    <div id="panel-kind" class="muted"></div>
+    <div id="panel-stats" class="panel-stats"></div>
+    <div id="panel-scores" class="panel-scores"></div>
+    <h3>Shop log</h3>
+    <div id="panel-log" class="panel-log"></div>
+  </aside>
 
-  <div id="end-card" class="card" hidden>
-    <h2>Episode over</h2>
+  <div id="end-card" class="card hud" hidden>
+    <h2>Final leaderboard</h2>
     <div id="end-body"></div>
     <button id="end-restart" class="btn primary" type="button">Watch again</button>
   </div>
 
+  <div id="help-card" class="card hud" hidden>
+    <h2>Keys</h2>
+    <dl>
+      <dt>Space</dt><dd>Play or pause</dd>
+      <dt>1 to 5</dt><dd>Enter a shop (or click it)</dd>
+      <dt>Esc</dt><dd>Leave the shop or the tour</dd>
+      <dt>O / F / T</dt><dd>Overview, walk (first person), tour</dd>
+      <dt>W A S D</dt><dd>Walk (arrows work too), Shift to hurry; click to look around</dd>
+      <dt>Drag / scroll</dt><dd>Orbit and zoom in overview</dd>
+      <dt>H</dt><dd>Photo mode: hide the HUD</dd>
+      <dt>Q</dt><dd>Quality low or high</dd>
+      <dt>M</dt><dd>Market sound on or off</dd>
+      <dt>?</dt><dd>This list</dd>
+    </dl>
+    <p class="help-note">Shoppers with a coloured ring at their feet are real customers of the shop in that colour, carrying its bag when they buy. A red ring means a customer turned away. Everyone else is the everyday market around them.</p>
+    <button id="help-close" class="btn" type="button">Close</button>
+  </div>
+
+  <div id="walk-hint" class="hud" hidden>Click to look around. W A S D to walk, Shift to hurry, Esc to free the mouse.</div>
+  <div id="fps" class="hud">-- fps</div>
   <div id="status" hidden></div>
 
-  <script type="module" src="/assets/web/app.js"></script>
+  <script type="module" src="/assets/web/js/main.js"></script>
 </body>
 </html>

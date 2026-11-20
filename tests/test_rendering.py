@@ -1,4 +1,4 @@
-"""Checks on the market street simulation: frames, scores, placeholders and the server."""
+"""Checks on the market street simulation: frames, scores, placeholders, credited assets and the server."""
 import json
 import threading
 import urllib.request
@@ -99,6 +99,22 @@ def test_missing_checkpoints_fall_back_to_placeholders(tmp_path):
     assert all(shop["name"].endswith("(placeholder)") for shop in placeholders)
     frame = next(iter(MarketRunner(shops, seed=SEED).frames()))
     assert json.loads(json.dumps(to_jsonable(frame)))["day"] == 1
+
+
+def test_every_shipped_asset_is_credited():
+    """Each texture and vendor file under assets/web/ is named, with its source, in assets/CREDITS.md."""
+    credits = (play.ASSETS_DIR / "CREDITS.md").read_text()
+    shipped = [path for folder in ("textures", "vendor") for path in (play.ASSETS_DIR / "web" / folder).iterdir()
+               if path.name != "LICENSE"]
+    assert shipped
+    assert [path.name for path in shipped if f"`{path.name}`" not in credits] == []
+
+
+def test_textures_are_served_as_images(server_url):
+    """The page can fetch its photo-scanned textures, sent with an image content type."""
+    with urllib.request.urlopen(f"{server_url}/assets/web/textures/ground_color.jpg", timeout=10) as response:
+        assert response.status == 200
+        assert response.headers["Content-Type"] == "image/jpeg"
 
 
 def test_meta_endpoint_returns_json(server_url):

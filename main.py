@@ -1,6 +1,6 @@
-"""Entry point: uv run main.py starts the 3D shop simulation (play.py) with its defaults.
+"""Entry point: uv run main.py starts the 3D market street (play.py) with its defaults.
 
-Any arguments are passed through, for example: uv run main.py --policy random --seed 1003
+Any arguments are passed through, for example: uv run main.py --market harsh --seed 1003
 """
 import sys
 
