@@ -1,0 +1,47 @@
+
+=== reinforce reinforce_04_s1: shorter horizon, gamma 0.95, seed 1 ===
+frames    5400  val greedy   -44.85  sample     7.40  entropy 2.561     12.8s
+frames   10350  val greedy   -54.73  sample    16.31  entropy 2.537     25.7s
+frames   15300  val greedy   -54.73  sample    22.10  entropy 2.411     39.0s
+frames   20250  val greedy   -54.31  sample    29.12  entropy 2.300     52.3s
+frames   25200  val greedy  -143.33  sample    31.45  entropy 2.265     65.1s
+frames   30150  val greedy  -144.60  sample    36.36  entropy 2.269     77.9s
+frames   35100  val greedy   -53.25  sample    37.17  entropy 2.221     90.9s
+frames   40050  val greedy   -51.08  sample    40.50  entropy 2.187    104.1s
+frames   45000  val greedy   -58.68  sample    42.76  entropy 2.105    117.7s
+frames   50400  val greedy   -50.07  sample    43.16  entropy 2.196    132.1s
+frames   55350  val greedy    35.17  sample    45.63  entropy 2.172    145.7s
+frames   60300  val greedy    39.80  sample    48.86  entropy 2.185    159.5s
+frames   65250  val greedy    38.87  sample    50.32  entropy 2.092    173.7s
+frames   70200  val greedy    18.70  sample    51.23  entropy 2.047    187.7s
+frames   75150  val greedy     8.01  sample    51.59  entropy 1.897    201.7s
+frames   80100  val greedy    31.27  sample    53.97  entropy 1.988    215.7s
+frames   85050  val greedy    34.52  sample    57.80  entropy 2.033    229.7s
+frames   90000  val greedy    37.69  sample    60.36  entropy 1.900    243.8s
+frames   95400  val greedy    39.66  sample    61.27  entropy 1.745    258.9s
+frames  100350  val greedy    74.08  sample    65.69  entropy 1.760    273.1s
+frames  105300  val greedy    37.99  sample    60.29  entropy 1.610    287.2s
+frames  110250  val greedy    74.60  sample    63.37  entropy 1.628    301.5s
+frames  115200  val greedy    44.74  sample    63.62  entropy 1.641    315.7s
+frames  120150  val greedy    70.50  sample    69.06  entropy 1.714    333.0s
+frames  125100  val greedy    62.91  sample    64.51  entropy 1.733    349.2s
+frames  130050  val greedy    69.80  sample    69.41  entropy 1.732    366.1s
+frames  135000  val greedy    71.40  sample    65.65  entropy 1.704    383.7s
+frames  140400  val greedy    73.94  sample    68.64  entropy 1.702    403.6s
+frames  145350  val greedy    48.78  sample    65.27  entropy 1.677    422.9s
+frames  150300  val greedy    64.35  sample    67.80  entropy 1.611    441.6s
+frames  155250  val greedy    70.94  sample    69.31  entropy 1.657    460.5s
+frames  160200  val greedy    75.23  sample    66.05  entropy 1.656    479.7s
+frames  165150  val greedy    68.12  sample    70.39  entropy 1.629    499.1s
+frames  170100  val greedy    71.63  sample    71.31  entropy 1.594    518.4s
+frames  175050  val greedy    70.54  sample    69.71  entropy 1.554    538.6s
+frames  180000  val greedy    71.17  sample    70.86  entropy 1.554    559.4s
+frames  185400  val greedy    73.41  sample    72.79  entropy 1.545    581.1s
+frames  190350  val greedy    72.16  sample    72.65  entropy 1.557    602.1s
+frames  195300  val greedy    73.55  sample    70.59  entropy 1.602    623.8s
+frames  200250  val greedy    74.54  sample    72.87  entropy 1.579    642.0s
+test final        return    73.91  net worth     1446512  invalid 0.017  hold 0.000  bankrupt 0  top: restock_indomie_small 0.351, open_rice_bag 0.267, restock_rice_large 0.203, restock_soap_small 0.176
+test best         return    75.89  net worth     1469048  invalid 0.076  hold 0.000  bankrupt 0  top: open_rice_bag 0.287, restock_indomie_small 0.286, restock_soap_small 0.248, restock_rice_large 0.143
+test final_sample return    74.96  net worth     1441771  invalid 0.042  hold 0.009  bankrupt 0  top: open_rice_bag 0.233, restock_indomie_small 0.201, restock_soap_small 0.191, restock_rice_large 0.142
+test best_sample  return    67.57  net worth     1393287  invalid 0.047  hold 0.013  bankrupt 0  top: open_rice_bag 0.243, restock_indomie_small 0.208, restock_soap_small 0.164, restock_rice_large 0.144
+done: 200250 frames in 651.1s, val return final 74.54, best 75.23

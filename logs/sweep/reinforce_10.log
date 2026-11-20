@@ -1,0 +1,47 @@
+
+=== reinforce reinforce_10: one episode per batch, 90 frames ===
+frames    5040  val greedy   -89.33  sample    19.51  entropy 2.511     13.9s
+frames   10080  val greedy  -145.27  sample    28.59  entropy 2.389     27.7s
+frames   15030  val greedy   -47.52  sample    28.72  entropy 2.313     41.1s
+frames   20070  val greedy   -84.66  sample    27.24  entropy 2.211     55.5s
+frames   25020  val greedy   -76.98  sample    36.20  entropy 2.068     73.2s
+frames   30060  val greedy     8.83  sample    31.19  entropy 2.068     88.7s
+frames   35010  val greedy   -25.45  sample    43.22  entropy 2.070    103.5s
+frames   40050  val greedy   -18.79  sample    39.48  entropy 2.244    118.9s
+frames   45000  val greedy   -19.13  sample    43.06  entropy 2.148    133.3s
+frames   50040  val greedy   -22.63  sample    38.75  entropy 1.987    147.5s
+frames   55080  val greedy    27.15  sample    36.60  entropy 2.142    161.3s
+frames   60030  val greedy   -20.45  sample    46.15  entropy 2.090    175.3s
+frames   65070  val greedy    10.70  sample    43.20  entropy 2.156    189.6s
+frames   70020  val greedy    31.20  sample    48.10  entropy 2.165    204.1s
+frames   75060  val greedy    27.79  sample    41.22  entropy 2.149    218.9s
+frames   80010  val greedy   -37.51  sample    42.83  entropy 2.179    234.0s
+frames   85050  val greedy    -8.30  sample    47.53  entropy 2.215    249.9s
+frames   90000  val greedy    29.47  sample    49.70  entropy 2.078    265.4s
+frames   95040  val greedy    28.66  sample    48.81  entropy 2.062    280.4s
+frames  100080  val greedy    10.41  sample    47.61  entropy 2.131    295.7s
+frames  105030  val greedy    16.33  sample    45.89  entropy 2.146    311.6s
+frames  110070  val greedy    17.40  sample    47.03  entropy 2.062    326.3s
+frames  115020  val greedy   -17.32  sample    46.13  entropy 1.844    340.0s
+frames  120060  val greedy   -13.21  sample    48.33  entropy 2.122    353.7s
+frames  125010  val greedy    -9.04  sample    49.90  entropy 1.898    368.0s
+frames  130050  val greedy    34.32  sample    54.61  entropy 2.107    382.7s
+frames  135000  val greedy    31.98  sample    52.91  entropy 2.129    397.3s
+frames  140040  val greedy    31.80  sample    54.93  entropy 2.027    412.2s
+frames  145080  val greedy    47.84  sample    55.74  entropy 2.099    427.2s
+frames  150030  val greedy    42.02  sample    56.65  entropy 2.166    442.2s
+frames  155070  val greedy    45.25  sample    53.23  entropy 2.219    457.7s
+frames  160020  val greedy   -56.42  sample    40.08  entropy 2.131    472.6s
+frames  165060  val greedy    65.43  sample    51.29  entropy 2.283    488.8s
+frames  170010  val greedy    41.73  sample    54.93  entropy 2.146    504.9s
+frames  175050  val greedy    40.83  sample    52.42  entropy 2.061    521.3s
+frames  180000  val greedy    61.76  sample    47.31  entropy 2.068    537.3s
+frames  185040  val greedy    46.91  sample    57.84  entropy 2.023    553.4s
+frames  190080  val greedy    46.06  sample    60.29  entropy 1.916    569.8s
+frames  195030  val greedy    52.51  sample    62.95  entropy 1.703    585.8s
+frames  200070  val greedy    48.35  sample    61.76  entropy 1.984    601.4s
+test final        return    50.31  net worth     1254074  invalid 0.049  hold 0.000  bankrupt 0  top: restock_rice_small 0.491, restock_soap_small 0.243, restock_indomie_large 0.167, open_rice_bag 0.099
+test best         return    66.97  net worth     1376255  invalid 0.026  hold 0.000  bankrupt 0  top: restock_rice_small 0.387, open_rice_bag 0.204, raise_price_band 0.174, restock_soap_small 0.128
+test final_sample return    58.13  net worth     1328589  invalid 0.083  hold 0.013  bankrupt 0  top: restock_soap_small 0.196, open_rice_bag 0.186, restock_rice_small 0.178, restock_indomie_large 0.096
+test best_sample  return    50.15  net worth     1249625  invalid 0.068  hold 0.030  bankrupt 0  top: open_rice_bag 0.152, raise_price_band 0.122, restock_rice_small 0.113, credit_strict 0.113
+done: 200070 frames in 608.6s, val return final 48.35, best 65.43

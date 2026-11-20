@@ -1,0 +1,47 @@
+
+=== reinforce reinforce_06: no baseline ===
+frames    5400  val greedy   -91.08  sample    12.21  entropy 2.559     17.5s
+frames   10350  val greedy   -91.28  sample    15.44  entropy 2.538     32.7s
+frames   15300  val greedy   -91.40  sample    20.59  entropy 2.505     49.1s
+frames   20250  val greedy   -55.85  sample    27.01  entropy 2.443     68.6s
+frames   25200  val greedy   -57.57  sample    32.85  entropy 2.401     85.2s
+frames   30150  val greedy  -112.66  sample    32.73  entropy 2.355     99.9s
+frames   35100  val greedy  -141.57  sample    33.65  entropy 2.292    114.1s
+frames   40050  val greedy  -145.27  sample    36.37  entropy 2.306    128.9s
+frames   45000  val greedy  -145.27  sample    35.26  entropy 2.304    144.8s
+frames   50400  val greedy  -140.77  sample    36.20  entropy 2.327    161.0s
+frames   55350  val greedy   -40.49  sample    32.57  entropy 2.308    175.7s
+frames   60300  val greedy   -90.24  sample    33.43  entropy 2.262    190.0s
+frames   65250  val greedy   -22.80  sample    36.96  entropy 2.221    204.6s
+frames   70200  val greedy   -20.28  sample    36.59  entropy 2.192    220.8s
+frames   75150  val greedy   -74.18  sample    37.25  entropy 2.140    237.7s
+frames   80100  val greedy  -105.85  sample    41.41  entropy 2.161    253.1s
+frames   85050  val greedy  -137.92  sample    39.42  entropy 2.178    267.8s
+frames   90000  val greedy   -58.63  sample    38.19  entropy 2.245    282.5s
+frames   95400  val greedy   -58.14  sample    39.57  entropy 2.208    297.7s
+frames  100350  val greedy   -44.82  sample    39.96  entropy 2.131    311.8s
+frames  105300  val greedy   -26.07  sample    40.68  entropy 2.029    328.5s
+frames  110250  val greedy   -20.08  sample    42.35  entropy 1.979    345.0s
+frames  115200  val greedy   -31.12  sample    43.73  entropy 2.040    361.4s
+frames  120150  val greedy   -24.25  sample    46.71  entropy 2.064    377.8s
+frames  125100  val greedy   -25.61  sample    45.64  entropy 1.973    393.6s
+frames  130050  val greedy   -20.49  sample    50.19  entropy 1.966    407.6s
+frames  135000  val greedy  -138.33  sample    42.12  entropy 1.919    420.9s
+frames  140400  val greedy    48.01  sample    46.01  entropy 2.017    435.6s
+frames  145350  val greedy    25.00  sample    46.10  entropy 2.066    449.5s
+frames  150300  val greedy    41.76  sample    48.07  entropy 2.000    463.4s
+frames  155250  val greedy    35.91  sample    48.22  entropy 1.956    478.3s
+frames  160200  val greedy   -82.96  sample    44.12  entropy 1.886    493.4s
+frames  165150  val greedy    42.94  sample    47.43  entropy 1.927    509.5s
+frames  170100  val greedy    53.86  sample    47.70  entropy 1.998    524.3s
+frames  175050  val greedy    38.75  sample    49.30  entropy 1.930    537.7s
+frames  180000  val greedy    37.53  sample    47.97  entropy 1.942    551.0s
+frames  185400  val greedy    -2.21  sample    43.33  entropy 1.905    564.8s
+frames  190350  val greedy     0.01  sample    38.43  entropy 1.830    578.4s
+frames  195300  val greedy    43.58  sample    48.35  entropy 1.883    591.8s
+frames  200250  val greedy    29.53  sample    53.39  entropy 1.802    605.5s
+test final        return    29.02  net worth     1127563  invalid 0.024  hold 0.000  bankrupt 0  top: restock_rice_small 0.589, open_rice_bag 0.236, restock_soap_small 0.134, restock_indomie_large 0.040
+test best         return    53.59  net worth     1263605  invalid 0.003  hold 0.000  bankrupt 0  top: restock_rice_small 0.496, restock_soap_small 0.241, open_rice_bag 0.178, restock_indomie_large 0.085
+test final_sample return    49.05  net worth     1290728  invalid 0.104  hold 0.002  bankrupt 0  top: restock_rice_small 0.271, open_rice_bag 0.229, restock_soap_small 0.211, restock_indomie_large 0.106
+test best_sample  return    45.50  net worth     1267729  invalid 0.126  hold 0.005  bankrupt 0  top: open_rice_bag 0.218, restock_soap_small 0.194, restock_rice_small 0.160, credit_strict 0.136
+done: 200250 frames in 611.7s, val return final 29.53, best 53.86

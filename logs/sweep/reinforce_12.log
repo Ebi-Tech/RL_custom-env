@@ -1,0 +1,47 @@
+
+=== reinforce reinforce_12: smaller network [64, 64] ===
+frames    5400  val greedy   -75.39  sample     4.94  entropy 2.561     15.1s
+frames   10350  val greedy   -54.73  sample     8.27  entropy 2.559     30.7s
+frames   15300  val greedy   -54.73  sample    10.76  entropy 2.554     49.6s
+frames   20250  val greedy   -54.73  sample    14.20  entropy 2.547     68.7s
+frames   25200  val greedy   -21.96  sample    16.63  entropy 2.527     88.0s
+frames   30150  val greedy   -21.25  sample    19.09  entropy 2.505    107.5s
+frames   35100  val greedy   -54.73  sample    22.94  entropy 2.468    127.0s
+frames   40050  val greedy   -54.73  sample    28.31  entropy 2.417    146.1s
+frames   45000  val greedy   -52.52  sample    34.35  entropy 2.399    165.1s
+frames   50400  val greedy  -100.78  sample    34.17  entropy 2.306    185.3s
+frames   55350  val greedy   -54.89  sample    35.68  entropy 2.207    203.8s
+frames   60300  val greedy   -90.47  sample    36.06  entropy 2.140    222.7s
+frames   65250  val greedy  -144.17  sample    37.00  entropy 2.200    242.0s
+frames   70200  val greedy  -143.19  sample    35.11  entropy 2.210    260.9s
+frames   75150  val greedy  -145.27  sample    35.93  entropy 2.140    279.7s
+frames   80100  val greedy  -144.38  sample    37.07  entropy 2.118    298.2s
+frames   85050  val greedy  -131.79  sample    35.53  entropy 2.120    316.8s
+frames   90000  val greedy  -143.99  sample    31.73  entropy 2.177    335.8s
+frames   95400  val greedy  -132.43  sample    35.64  entropy 2.190    351.0s
+frames  100350  val greedy   -81.75  sample    39.69  entropy 2.138    363.8s
+frames  105300  val greedy   -95.71  sample    41.08  entropy 2.122    376.2s
+frames  110250  val greedy   -50.29  sample    38.11  entropy 2.169    388.6s
+frames  115200  val greedy  -145.27  sample    39.67  entropy 2.180    400.6s
+frames  120150  val greedy  -145.27  sample    42.37  entropy 2.187    413.0s
+frames  125100  val greedy   -44.16  sample    40.55  entropy 2.206    425.6s
+frames  130050  val greedy    22.74  sample    40.12  entropy 2.205    437.9s
+frames  135000  val greedy  -137.59  sample    43.20  entropy 2.162    449.9s
+frames  140400  val greedy   -15.81  sample    42.92  entropy 2.192    463.4s
+frames  145350  val greedy   -34.72  sample    44.56  entropy 2.145    479.5s
+frames  150300  val greedy    -7.37  sample    45.80  entropy 2.178    494.3s
+frames  155250  val greedy    17.50  sample    45.34  entropy 2.144    509.2s
+frames  160200  val greedy   -64.05  sample    44.55  entropy 2.149    524.3s
+frames  165150  val greedy   -64.81  sample    46.20  entropy 2.099    538.7s
+frames  170100  val greedy   -64.73  sample    43.81  entropy 2.101    552.8s
+frames  175050  val greedy   -67.48  sample    43.89  entropy 2.110    566.1s
+frames  180000  val greedy   -51.72  sample    46.27  entropy 2.065    578.8s
+frames  185400  val greedy   -53.18  sample    46.56  entropy 2.030    592.7s
+frames  190350  val greedy   -52.50  sample    46.86  entropy 2.041    606.0s
+frames  195300  val greedy   -51.58  sample    46.35  entropy 2.001    618.9s
+frames  200250  val greedy   -66.42  sample    49.83  entropy 1.975    631.7s
+test final        return   -64.79  net worth      736111  invalid 0.608  hold 0.000  bankrupt 0  top: restock_indomie_small 0.927, open_rice_bag 0.073, hold 0.000, restock_indomie_large 0.000
+test best         return    22.79  net worth     1192431  invalid 0.224  hold 0.000  bankrupt 0  top: restock_indomie_small 0.438, open_rice_bag 0.402, restock_rice_large 0.160, hold 0.000
+test final_sample return    47.84  net worth     1285891  invalid 0.142  hold 0.002  bankrupt 0  top: open_rice_bag 0.241, restock_indomie_small 0.217, raise_price_band 0.163, restock_rice_large 0.105
+test best_sample  return    38.90  net worth     1246204  invalid 0.183  hold 0.012  bankrupt 0  top: open_rice_bag 0.219, restock_indomie_small 0.151, restock_rice_large 0.123, raise_price_band 0.108
+done: 200250 frames in 637.4s, val return final -66.42, best 22.74
