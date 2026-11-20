@@ -1,0 +1,47 @@
+
+=== ppo ppo_08_s1: larger entropy bonus 0.05, seed 1 ===
+frames    5400  val greedy  -137.49  sample    22.82  entropy 2.478     16.8s
+frames   10800  val greedy   -52.91  sample    32.60  entropy 2.344     32.8s
+frames   15300  val greedy   -30.52  sample    36.31  entropy 2.315     46.3s
+frames   20700  val greedy   -42.24  sample    42.71  entropy 2.204     62.0s
+frames   25200  val greedy    -1.52  sample    45.93  entropy 2.202     75.6s
+frames   30600  val greedy    68.42  sample    51.86  entropy 2.154     91.5s
+frames   35100  val greedy    62.88  sample    57.32  entropy 2.042    105.0s
+frames   40500  val greedy    70.85  sample    61.31  entropy 1.998    120.6s
+frames   45000  val greedy    74.25  sample    65.42  entropy 1.967    134.6s
+frames   50400  val greedy    76.62  sample    68.96  entropy 2.033    149.9s
+frames   55800  val greedy    77.36  sample    69.11  entropy 1.898    165.4s
+frames   60300  val greedy    79.85  sample    70.26  entropy 1.907    179.1s
+frames   65700  val greedy    85.26  sample    74.27  entropy 1.945    194.7s
+frames   70200  val greedy    83.85  sample    75.04  entropy 1.873    208.1s
+frames   75600  val greedy    81.74  sample    77.44  entropy 1.780    223.6s
+frames   80100  val greedy    86.26  sample    77.74  entropy 1.858    237.0s
+frames   85500  val greedy    86.87  sample    78.29  entropy 1.771    252.2s
+frames   90000  val greedy    85.21  sample    77.45  entropy 1.820    265.6s
+frames   95400  val greedy    87.84  sample    78.81  entropy 1.782    280.7s
+frames  100800  val greedy    87.80  sample    80.00  entropy 1.724    298.0s
+frames  105300  val greedy    86.99  sample    81.46  entropy 1.766    317.3s
+frames  110700  val greedy    96.27  sample    83.26  entropy 1.730    341.0s
+frames  115200  val greedy    90.21  sample    81.81  entropy 1.692    361.2s
+frames  120600  val greedy    89.75  sample    83.59  entropy 1.732    384.5s
+frames  125100  val greedy   104.38  sample    86.48  entropy 1.579    405.5s
+frames  130500  val greedy   105.75  sample    89.69  entropy 1.551    430.5s
+frames  135000  val greedy   105.64  sample    94.81  entropy 1.432    452.5s
+frames  140400  val greedy   104.27  sample    97.83  entropy 1.360    477.6s
+frames  145800  val greedy   107.29  sample    97.24  entropy 1.247    503.1s
+frames  150300  val greedy   103.94  sample    99.29  entropy 1.306    524.5s
+frames  155700  val greedy   105.76  sample   101.10  entropy 1.262    549.8s
+frames  160200  val greedy   103.61  sample   100.46  entropy 1.277    571.6s
+frames  165600  val greedy   101.78  sample    99.91  entropy 1.187    596.3s
+frames  170100  val greedy   104.33  sample   100.79  entropy 1.276    615.5s
+frames  175500  val greedy   106.14  sample   100.27  entropy 1.219    633.0s
+frames  180000  val greedy   106.21  sample   102.35  entropy 1.228    647.6s
+frames  185400  val greedy   106.09  sample   103.00  entropy 1.145    663.6s
+frames  190800  val greedy   107.03  sample   102.62  entropy 1.101    680.2s
+frames  195300  val greedy   106.75  sample   103.28  entropy 1.164    698.1s
+frames  200700  val greedy   107.67  sample   102.60  entropy 1.215    716.9s
+test final        return   108.48  net worth     1730471  invalid 0.013  hold 0.031  bankrupt 0  top: open_rice_bag 0.326, restock_rice_large 0.248, restock_soap_small 0.159, restock_indomie_large 0.145
+test best         return   108.48  net worth     1730471  invalid 0.013  hold 0.031  bankrupt 0  top: open_rice_bag 0.326, restock_rice_large 0.248, restock_soap_small 0.159, restock_indomie_large 0.145
+test final_sample return   103.19  net worth     1692795  invalid 0.024  hold 0.045  bankrupt 0  top: open_rice_bag 0.312, restock_rice_large 0.232, restock_indomie_large 0.135, restock_soap_large 0.089
+test best_sample  return   103.19  net worth     1692795  invalid 0.024  hold 0.045  bankrupt 0  top: open_rice_bag 0.312, restock_rice_large 0.232, restock_indomie_large 0.135, restock_soap_large 0.089
+done: 200700 frames in 724.1s, val return final 107.67, best 107.67

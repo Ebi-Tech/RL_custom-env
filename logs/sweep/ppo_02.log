@@ -1,0 +1,47 @@
+
+=== ppo ppo_02: lower learning rate 1e-4 ===
+frames    5400  val greedy   -59.00  sample     9.91  entropy 2.557     35.4s
+frames   10800  val greedy   -59.00  sample    18.46  entropy 2.486     67.1s
+frames   15300  val greedy  -114.13  sample    24.34  entropy 2.454     94.6s
+frames   20700  val greedy  -144.68  sample    28.20  entropy 2.388    127.9s
+frames   25200  val greedy  -145.27  sample    31.16  entropy 2.317    156.9s
+frames   30600  val greedy  -142.95  sample    37.37  entropy 2.319    189.2s
+frames   35100  val greedy  -144.73  sample    41.96  entropy 2.229    217.0s
+frames   40500  val greedy   -11.63  sample    39.91  entropy 2.171    250.4s
+frames   45000  val greedy   -46.83  sample    43.19  entropy 2.110    284.4s
+frames   50400  val greedy     9.62  sample    45.88  entropy 2.051    319.5s
+frames   55800  val greedy    14.29  sample    46.33  entropy 2.134    352.5s
+frames   60300  val greedy   -23.05  sample    49.00  entropy 2.025    380.8s
+frames   65700  val greedy    19.87  sample    50.44  entropy 2.022    413.9s
+frames   70200  val greedy    63.25  sample    52.46  entropy 1.973    442.3s
+frames   75600  val greedy    33.10  sample    56.14  entropy 1.946    475.2s
+frames   80100  val greedy   -14.41  sample    56.19  entropy 1.860    503.5s
+frames   85500  val greedy    46.02  sample    58.35  entropy 1.835    537.0s
+frames   90000  val greedy    78.59  sample    59.22  entropy 1.915    566.1s
+frames   95400  val greedy    56.00  sample    60.57  entropy 1.865    599.2s
+frames  100800  val greedy    69.05  sample    63.40  entropy 1.839    632.0s
+frames  105300  val greedy    72.11  sample    63.57  entropy 1.783    660.6s
+frames  110700  val greedy    72.75  sample    66.76  entropy 1.681    693.7s
+frames  115200  val greedy    73.16  sample    67.83  entropy 1.682    723.4s
+frames  120600  val greedy    71.79  sample    69.48  entropy 1.554    756.5s
+frames  125100  val greedy    73.88  sample    69.29  entropy 1.492    794.6s
+frames  130500  val greedy    76.49  sample    69.03  entropy 1.541    832.5s
+frames  135000  val greedy    75.26  sample    73.87  entropy 1.518    860.4s
+frames  140400  val greedy    76.74  sample    74.02  entropy 1.484    892.6s
+frames  145800  val greedy    79.38  sample    74.96  entropy 1.524    924.8s
+frames  150300  val greedy    84.62  sample    75.64  entropy 1.528    952.3s
+frames  155700  val greedy    79.74  sample    75.37  entropy 1.481    983.4s
+frames  160200  val greedy    76.00  sample    75.66  entropy 1.471   1010.7s
+frames  165600  val greedy    80.52  sample    77.39  entropy 1.524   1041.8s
+frames  170100  val greedy    80.71  sample    78.08  entropy 1.481   1068.5s
+frames  175500  val greedy    86.02  sample    77.62  entropy 1.438   1098.7s
+frames  180000  val greedy    84.65  sample    79.73  entropy 1.396   1125.7s
+frames  185400  val greedy    78.51  sample    79.58  entropy 1.388   1156.1s
+frames  190800  val greedy    85.59  sample    79.55  entropy 1.376   1186.4s
+frames  195300  val greedy    87.16  sample    80.74  entropy 1.408   1212.5s
+frames  200700  val greedy    87.23  sample    80.99  entropy 1.422   1242.8s
+test final        return    86.12  net worth     1501010  invalid 0.002  hold 0.000  bankrupt 0  top: restock_indomie_small 0.292, restock_soap_small 0.238, open_rice_bag 0.223, restock_rice_large 0.128
+test best         return    86.12  net worth     1501010  invalid 0.002  hold 0.000  bankrupt 0  top: restock_indomie_small 0.292, restock_soap_small 0.238, open_rice_bag 0.223, restock_rice_large 0.128
+test final_sample return    78.53  net worth     1456861  invalid 0.028  hold 0.001  bankrupt 0  top: restock_indomie_small 0.240, open_rice_bag 0.225, restock_soap_small 0.215, raise_price_band 0.152
+test best_sample  return    78.53  net worth     1456861  invalid 0.028  hold 0.001  bankrupt 0  top: restock_indomie_small 0.240, open_rice_bag 0.225, restock_soap_small 0.215, raise_price_band 0.152
+done: 200700 frames in 1255.1s, val return final 87.23, best 87.23

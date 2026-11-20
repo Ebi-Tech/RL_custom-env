@@ -1,0 +1,47 @@
+
+=== ppo ppo_10: longer rollouts, 2700 frames ===
+frames    5400  val greedy   -86.57  sample    17.17  entropy 2.543     17.1s
+frames   10800  val greedy   -51.85  sample    25.43  entropy 2.495     34.3s
+frames   16200  val greedy   -63.85  sample    37.72  entropy 2.446     51.8s
+frames   21600  val greedy   -27.92  sample    43.79  entropy 2.366     68.6s
+frames   27000  val greedy    -0.86  sample    51.03  entropy 2.294     86.0s
+frames   32400  val greedy     4.04  sample    57.80  entropy 2.214    103.9s
+frames   35100  val greedy    22.70  sample    60.15  entropy 2.172    113.7s
+frames   40500  val greedy    63.65  sample    65.45  entropy 2.122    129.9s
+frames   45900  val greedy    48.11  sample    66.77  entropy 2.073    145.7s
+frames   51300  val greedy    66.15  sample    70.57  entropy 2.029    162.3s
+frames   56700  val greedy    59.07  sample    70.42  entropy 1.953    179.1s
+frames   62100  val greedy    70.44  sample    75.06  entropy 1.859    196.2s
+frames   67500  val greedy    81.10  sample    76.20  entropy 1.818    213.3s
+frames   70200  val greedy    77.41  sample    79.57  entropy 1.791    223.5s
+frames   75600  val greedy    79.66  sample    79.05  entropy 1.729    241.2s
+frames   81000  val greedy    82.18  sample    83.49  entropy 1.738    259.0s
+frames   86400  val greedy    83.00  sample    83.06  entropy 1.697    277.7s
+frames   91800  val greedy    82.63  sample    91.75  entropy 1.697    296.9s
+frames   97200  val greedy    85.77  sample    90.97  entropy 1.661    316.1s
+frames  102600  val greedy    83.47  sample    91.14  entropy 1.647    335.2s
+frames  105300  val greedy    84.36  sample    96.10  entropy 1.604    346.9s
+frames  110700  val greedy    85.63  sample    94.57  entropy 1.564    366.4s
+frames  116100  val greedy    86.35  sample    94.53  entropy 1.537    385.7s
+frames  121500  val greedy    87.21  sample   100.48  entropy 1.546    404.8s
+frames  126900  val greedy    87.40  sample    96.54  entropy 1.503    425.0s
+frames  132300  val greedy    88.49  sample   101.46  entropy 1.535    445.3s
+frames  135000  val greedy    88.46  sample   104.00  entropy 1.542    457.1s
+frames  140400  val greedy    87.86  sample   101.47  entropy 1.490    477.1s
+frames  145800  val greedy    86.98  sample   104.63  entropy 1.423    497.3s
+frames  151200  val greedy    86.80  sample   105.17  entropy 1.470    517.6s
+frames  156600  val greedy    85.18  sample   107.35  entropy 1.470    537.7s
+frames  162000  val greedy    97.89  sample   108.91  entropy 1.469    560.1s
+frames  167400  val greedy   108.12  sample   108.59  entropy 1.452    585.6s
+frames  170100  val greedy    99.16  sample   107.57  entropy 1.434    602.3s
+frames  175500  val greedy   100.65  sample   105.32  entropy 1.392    624.5s
+frames  180900  val greedy   107.78  sample   110.85  entropy 1.419    644.9s
+frames  186300  val greedy   112.86  sample   108.53  entropy 1.407    664.8s
+frames  191700  val greedy   110.28  sample   111.82  entropy 1.364    685.1s
+frames  197100  val greedy   115.15  sample   110.26  entropy 1.382    705.5s
+frames  202500  val greedy   117.04  sample   111.51  entropy 1.377    727.1s
+test final        return   118.46  net worth     1822311  invalid 0.004  hold 0.000  bankrupt 0  top: open_rice_bag 0.324, restock_rice_large 0.193, restock_soap_small 0.143, restock_indomie_small 0.091
+test best         return   118.46  net worth     1822311  invalid 0.004  hold 0.000  bankrupt 0  top: open_rice_bag 0.324, restock_rice_large 0.193, restock_soap_small 0.143, restock_indomie_small 0.091
+test final_sample return   112.01  net worth     1779171  invalid 0.023  hold 0.002  bankrupt 0  top: open_rice_bag 0.309, restock_rice_large 0.166, restock_indomie_large 0.097, restock_soap_small 0.091
+test best_sample  return   112.01  net worth     1779171  invalid 0.023  hold 0.002  bankrupt 0  top: open_rice_bag 0.309, restock_rice_large 0.166, restock_indomie_large 0.097, restock_soap_small 0.091
+done: 202500 frames in 736.8s, val return final 117.04, best 117.04

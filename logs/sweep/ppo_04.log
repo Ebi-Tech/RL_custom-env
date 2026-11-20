@@ -1,0 +1,47 @@
+
+=== ppo ppo_04: longer horizon, gamma 0.999 ===
+frames    5400  val greedy  -135.43  sample    24.23  entropy 2.492     16.2s
+frames   10800  val greedy  -137.20  sample    27.56  entropy 2.330     31.9s
+frames   15300  val greedy  -122.83  sample    34.04  entropy 2.342     45.4s
+frames   20700  val greedy    64.24  sample    34.53  entropy 2.293     61.4s
+frames   25200  val greedy   -54.31  sample    46.69  entropy 2.238     75.1s
+frames   30600  val greedy   -11.35  sample    50.52  entropy 2.098     90.8s
+frames   35100  val greedy    51.42  sample    57.42  entropy 2.029    104.6s
+frames   40500  val greedy    69.63  sample    59.94  entropy 1.960    120.8s
+frames   45000  val greedy    70.92  sample    65.83  entropy 1.845    135.4s
+frames   50400  val greedy    73.31  sample    73.14  entropy 1.795    152.5s
+frames   55800  val greedy    74.87  sample    74.16  entropy 1.849    169.9s
+frames   60300  val greedy    70.88  sample    83.72  entropy 1.779    185.5s
+frames   65700  val greedy    69.34  sample    85.14  entropy 1.733    202.8s
+frames   70200  val greedy    62.22  sample    82.39  entropy 1.640    218.7s
+frames   75600  val greedy    59.36  sample    88.38  entropy 1.580    236.5s
+frames   80100  val greedy    66.35  sample    92.44  entropy 1.639    251.8s
+frames   85500  val greedy   106.65  sample    89.97  entropy 1.639    271.0s
+frames   90000  val greedy   111.25  sample    93.46  entropy 1.670    287.6s
+frames   95400  val greedy   112.43  sample    97.48  entropy 1.560    307.3s
+frames  100800  val greedy   115.72  sample    95.54  entropy 1.548    326.4s
+frames  105300  val greedy   114.78  sample    97.88  entropy 1.494    341.9s
+frames  110700  val greedy   113.78  sample   101.33  entropy 1.456    359.9s
+frames  115200  val greedy   110.74  sample   101.03  entropy 1.374    376.2s
+frames  120600  val greedy   112.06  sample   100.35  entropy 1.352    396.1s
+frames  125100  val greedy   109.88  sample   101.29  entropy 1.300    413.0s
+frames  130500  val greedy   106.92  sample   103.30  entropy 1.205    434.0s
+frames  135000  val greedy   114.00  sample   104.36  entropy 1.223    450.5s
+frames  140400  val greedy   114.84  sample   103.66  entropy 1.234    469.5s
+frames  145800  val greedy   113.21  sample   106.59  entropy 1.182    489.4s
+frames  150300  val greedy   115.80  sample   106.42  entropy 1.214    510.5s
+frames  155700  val greedy   116.50  sample   105.07  entropy 1.201    535.5s
+frames  160200  val greedy   117.76  sample   108.21  entropy 1.187    553.5s
+frames  165600  val greedy   110.67  sample   109.80  entropy 1.106    575.8s
+frames  170100  val greedy   112.62  sample   109.79  entropy 1.092    595.1s
+frames  175500  val greedy   113.94  sample   108.65  entropy 1.088    617.1s
+frames  180000  val greedy   108.15  sample   108.25  entropy 1.048    634.4s
+frames  185400  val greedy   117.33  sample   105.95  entropy 1.029    655.7s
+frames  190800  val greedy   117.01  sample   107.73  entropy 1.031    676.8s
+frames  195300  val greedy   115.41  sample   108.67  entropy 1.111    694.8s
+frames  200700  val greedy   118.14  sample   107.38  entropy 1.039    714.4s
+test final        return   119.81  net worth     1843874  invalid 0.008  hold 0.000  bankrupt 0  top: restock_soap_small 0.334, open_rice_bag 0.327, restock_rice_large 0.196, restock_indomie_large 0.118
+test best         return   119.81  net worth     1843874  invalid 0.008  hold 0.000  bankrupt 0  top: restock_soap_small 0.334, open_rice_bag 0.327, restock_rice_large 0.196, restock_indomie_large 0.118
+test final_sample return   109.04  net worth     1762960  invalid 0.029  hold 0.001  bankrupt 0  top: open_rice_bag 0.322, restock_soap_small 0.292, restock_rice_large 0.181, restock_indomie_large 0.114
+test best_sample  return   109.04  net worth     1762960  invalid 0.029  hold 0.001  bankrupt 0  top: open_rice_bag 0.322, restock_soap_small 0.292, restock_rice_large 0.181, restock_indomie_large 0.114
+done: 200700 frames in 724.3s, val return final 118.14, best 118.14

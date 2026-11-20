@@ -1,0 +1,47 @@
+
+=== ppo ppo_05: tighter clip 0.1 ===
+frames    5400  val greedy   -59.00  sample    18.65  entropy 2.532     17.6s
+frames   10800  val greedy  -136.04  sample    30.28  entropy 2.445     34.6s
+frames   15300  val greedy  -134.57  sample    35.48  entropy 2.416     50.0s
+frames   20700  val greedy   -24.07  sample    41.88  entropy 2.345     68.3s
+frames   25200  val greedy    16.43  sample    48.60  entropy 2.288     83.6s
+frames   30600  val greedy     9.45  sample    53.19  entropy 2.188    101.8s
+frames   35100  val greedy    59.69  sample    56.56  entropy 2.122    117.7s
+frames   40500  val greedy    66.71  sample    60.40  entropy 2.041    137.7s
+frames   45000  val greedy    73.03  sample    64.13  entropy 1.963    154.8s
+frames   50400  val greedy    80.49  sample    70.42  entropy 1.898    174.9s
+frames   55800  val greedy    82.52  sample    71.41  entropy 1.842    195.4s
+frames   60300  val greedy    86.01  sample    74.70  entropy 1.806    215.9s
+frames   65700  val greedy    86.08  sample    75.26  entropy 1.794    240.6s
+frames   70200  val greedy    86.00  sample    78.47  entropy 1.754    259.7s
+frames   75600  val greedy    87.59  sample    79.11  entropy 1.670    278.4s
+frames   80100  val greedy    86.30  sample    78.39  entropy 1.672    294.8s
+frames   85500  val greedy    87.83  sample    81.10  entropy 1.618    313.7s
+frames   90000  val greedy    88.98  sample    79.53  entropy 1.595    330.9s
+frames   95400  val greedy    87.67  sample    83.27  entropy 1.575    351.4s
+frames  100800  val greedy    87.34  sample    85.75  entropy 1.517    370.2s
+frames  105300  val greedy    88.73  sample    89.27  entropy 1.525    386.7s
+frames  110700  val greedy    86.95  sample    91.15  entropy 1.493    406.8s
+frames  115200  val greedy    86.99  sample    91.42  entropy 1.540    424.1s
+frames  120600  val greedy    86.89  sample    90.84  entropy 1.482    443.3s
+frames  125100  val greedy    87.42  sample    98.80  entropy 1.447    459.6s
+frames  130500  val greedy    87.66  sample    96.72  entropy 1.440    478.4s
+frames  135000  val greedy    87.68  sample    97.75  entropy 1.392    496.1s
+frames  140400  val greedy    86.98  sample    97.61  entropy 1.452    517.5s
+frames  145800  val greedy    87.24  sample   100.72  entropy 1.375    537.1s
+frames  150300  val greedy    87.23  sample   101.02  entropy 1.390    554.1s
+frames  155700  val greedy    95.07  sample   102.40  entropy 1.245    573.5s
+frames  160200  val greedy   101.86  sample   100.51  entropy 1.314    589.6s
+frames  165600  val greedy    94.09  sample   104.40  entropy 1.210    607.7s
+frames  170100  val greedy   107.97  sample   107.00  entropy 1.181    624.2s
+frames  175500  val greedy   110.80  sample   107.41  entropy 1.163    644.9s
+frames  180000  val greedy   112.60  sample   105.53  entropy 1.212    663.9s
+frames  185400  val greedy   109.89  sample   105.45  entropy 1.223    685.6s
+frames  190800  val greedy   110.76  sample   108.48  entropy 1.208    707.8s
+frames  195300  val greedy   110.67  sample   109.22  entropy 1.201    730.7s
+frames  200700  val greedy   108.97  sample   109.00  entropy 1.262    752.2s
+test final        return   104.96  net worth     1685475  invalid 0.002  hold 0.000  bankrupt 0  top: restock_soap_small 0.308, open_rice_bag 0.289, restock_rice_large 0.164, raise_price_band 0.119
+test best         return   110.63  net worth     1745410  invalid 0.006  hold 0.000  bankrupt 0  top: restock_soap_small 0.320, open_rice_bag 0.302, restock_rice_large 0.167, restock_indomie_large 0.111
+test final_sample return   110.24  net worth     1759708  invalid 0.017  hold 0.001  bankrupt 0  top: open_rice_bag 0.298, restock_soap_small 0.232, restock_rice_large 0.169, restock_indomie_large 0.113
+test best_sample  return   106.45  net worth     1733383  invalid 0.025  hold 0.001  bankrupt 0  top: open_rice_bag 0.297, restock_soap_small 0.263, restock_rice_large 0.159, restock_indomie_large 0.108
+done: 200700 frames in 761.3s, val return final 108.97, best 112.60
