@@ -1,0 +1,44 @@
+
+=== dqn_02: lower learning rate 3e-4 ===
+frames    5040  val return   -13.94  epsilon 0.761     14.6s
+frames   10080  val return    24.20  epsilon 0.521     29.7s
+frames   15030  val return    80.70  epsilon 0.286     45.2s
+frames   20070  val return    78.77  epsilon 0.050     60.3s
+frames   25020  val return    72.53  epsilon 0.050     75.6s
+frames   30060  val return    81.46  epsilon 0.050     90.3s
+frames   35010  val return    85.62  epsilon 0.050    107.0s
+frames   40050  val return    81.46  epsilon 0.050    123.7s
+frames   45000  val return    83.71  epsilon 0.050    140.4s
+frames   50040  val return    85.96  epsilon 0.050    157.2s
+frames   55080  val return    85.39  epsilon 0.050    173.1s
+frames   60030  val return    86.48  epsilon 0.050    189.3s
+frames   65070  val return    85.82  epsilon 0.050    218.4s
+frames   70020  val return    87.81  epsilon 0.050    248.9s
+frames   75060  val return    87.44  epsilon 0.050    280.5s
+frames   80010  val return    87.79  epsilon 0.050    311.8s
+frames   85050  val return    85.29  epsilon 0.050    341.7s
+frames   90000  val return    87.73  epsilon 0.050    371.6s
+frames   95040  val return    86.18  epsilon 0.050    400.9s
+frames  100080  val return    87.14  epsilon 0.050    431.1s
+frames  105030  val return    87.77  epsilon 0.050    460.4s
+frames  110070  val return    86.59  epsilon 0.050    491.6s
+frames  115020  val return    85.97  epsilon 0.050    523.3s
+frames  120060  val return    84.00  epsilon 0.050    553.8s
+frames  125010  val return    86.47  epsilon 0.050    583.9s
+frames  130050  val return    89.46  epsilon 0.050    614.6s
+frames  135000  val return    87.60  epsilon 0.050    644.5s
+frames  140040  val return    86.46  epsilon 0.050    675.2s
+frames  145080  val return    86.36  epsilon 0.050    704.9s
+frames  150030  val return    87.17  epsilon 0.050    735.3s
+frames  155070  val return    88.50  epsilon 0.050    765.4s
+frames  160020  val return    87.24  epsilon 0.050    795.2s
+frames  165060  val return    87.42  epsilon 0.050    826.4s
+frames  170010  val return    86.78  epsilon 0.050    857.1s
+frames  175050  val return    88.67  epsilon 0.050    889.9s
+frames  180000  val return    87.14  epsilon 0.050    924.9s
+frames  185040  val return    89.81  epsilon 0.050    957.3s
+frames  190080  val return    86.85  epsilon 0.050    995.0s
+frames  195030  val return    88.96  epsilon 0.050   1035.6s
+frames  200070  val return    95.47  epsilon 0.050   1073.0s
+test return: final 93.94, best checkpoint 93.94
+done: 200070 frames in 1080.4s, val return final 95.47, best 95.47

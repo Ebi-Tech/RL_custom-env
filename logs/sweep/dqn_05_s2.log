@@ -1,0 +1,44 @@
+
+=== dqn_05_s2: longer horizon, gamma 0.999, seed 2 ===
+frames    5040  val return   -33.47  epsilon 0.761     13.4s
+frames   10080  val return    33.74  epsilon 0.521     27.6s
+frames   15030  val return    75.34  epsilon 0.286     41.8s
+frames   20070  val return    75.06  epsilon 0.050     56.4s
+frames   25020  val return    87.73  epsilon 0.050     70.8s
+frames   30060  val return    90.19  epsilon 0.050     85.3s
+frames   35010  val return    84.88  epsilon 0.050     99.5s
+frames   40050  val return    87.07  epsilon 0.050    114.3s
+frames   45000  val return    84.06  epsilon 0.050    128.1s
+frames   50040  val return    87.27  epsilon 0.050    142.4s
+frames   55080  val return   107.86  epsilon 0.050    157.0s
+frames   60030  val return   102.45  epsilon 0.050    171.2s
+frames   65070  val return   102.53  epsilon 0.050    185.7s
+frames   70020  val return    84.63  epsilon 0.050    200.0s
+frames   75060  val return   101.80  epsilon 0.050    214.5s
+frames   80010  val return   107.35  epsilon 0.050    228.6s
+frames   85050  val return   107.53  epsilon 0.050    243.2s
+frames   90000  val return   107.67  epsilon 0.050    257.4s
+frames   95040  val return   103.28  epsilon 0.050    271.6s
+frames  100080  val return    98.45  epsilon 0.050    292.6s
+frames  105030  val return   105.91  epsilon 0.050    314.3s
+frames  110070  val return   104.40  epsilon 0.050    336.2s
+frames  115020  val return   105.97  epsilon 0.050    357.5s
+frames  120060  val return   105.87  epsilon 0.050    379.5s
+frames  125010  val return   107.98  epsilon 0.050    402.1s
+frames  130050  val return   104.28  epsilon 0.050    425.3s
+frames  135000  val return   105.59  epsilon 0.050    447.9s
+frames  140040  val return   103.63  epsilon 0.050    470.4s
+frames  145080  val return   103.99  epsilon 0.050    493.5s
+frames  150030  val return   107.81  epsilon 0.050    515.9s
+frames  155070  val return   101.86  epsilon 0.050    538.6s
+frames  160020  val return   106.43  epsilon 0.050    561.3s
+frames  165060  val return   106.81  epsilon 0.050    584.7s
+frames  170010  val return   107.61  epsilon 0.050    602.2s
+frames  175050  val return   109.12  epsilon 0.050    618.3s
+frames  180000  val return    98.17  epsilon 0.050    633.2s
+frames  185040  val return   109.26  epsilon 0.050    648.7s
+frames  190080  val return   118.78  epsilon 0.050    664.4s
+frames  195030  val return   106.77  epsilon 0.050    684.4s
+frames  200070  val return    86.30  epsilon 0.050    701.7s
+test return: final 89.15, best checkpoint 114.43
+done: 200070 frames in 705.6s, val return final 86.30, best 118.78
