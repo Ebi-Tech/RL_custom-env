@@ -48,6 +48,7 @@ ACTIVATIONS = {"relu": nn.ReLU, "tanh": nn.Tanh}
 ADVANTAGE_EPS = 1e-8
 TRAIN_STATS_IN_EVAL = ("entropy", "approx_kl", "clip_fraction")
 TOP_ACTIONS_SHOWN = 4
+LOSS_TERMS = ("loss_objective", "loss_critic", "loss_entropy")
 
 DEFAULT_REINFORCE_CONFIG = {
     "market": "default",
@@ -292,12 +293,37 @@ def compute_advantages(agent, batch, config):
         agent["advantage_module"](batch)
 
 
+def total_loss(out):
+    """Add up the loss terms the TorchRL loss returned, in a fixed order, skipping any it left out.
+
+    A2CLoss in TorchRL 0.3.1 returns no loss_entropy when entropy_coef is 0. When every term is
+    present the additions are exactly objective + critic + entropy, as before, so the result is
+    bit for bit the same.
+    """
+    terms = [out[key] for key in LOSS_TERMS if key in out.keys()]
+    loss = terms[0]
+    for term in terms[1:]:
+        loss = loss + term
+    return loss
+
+
+def policy_entropy(agent, data):
+    """Return the mean entropy of the actor's action distribution on some data, without gradients.
+
+    It is computed from the distribution itself, so it is logged even when the loss has no entropy term,
+    and it does not touch any random state or parameter, so training is unchanged.
+    """
+    with torch.no_grad():
+        return agent["actor"].get_dist(data.select("observation")).entropy().mean().item()
+
+
 def loss_step(agent, data, config):
     """Run the TorchRL loss on some data, take one gradient step, and return the logged loss parts."""
+    entropy = policy_entropy(agent, data)
     out = agent["loss_module"](data)
-    optimise(agent, out["loss_objective"] + out["loss_critic"] + out["loss_entropy"], config)
+    optimise(agent, total_loss(out), config)
     return {"actor_loss": out["loss_objective"].item(), "critic_loss": out["loss_critic"].item(),
-            "entropy": out["entropy"].item()}
+            "entropy": entropy}
 
 
 def a2c_update(agent, batch, config):

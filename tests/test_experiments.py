@@ -4,7 +4,7 @@ import pytest
 from training import pg_training
 from training.dqn_training import DEFAULT_DQN_CONFIG
 from training.dqn_training import merge_config as merge_dqn_config
-from training.experiments import EXPERIMENTS, changed_settings
+from training.experiments import EXPERIMENTS, changed_settings, find_experiment
 from training.run_sweeps import ALGO_ORDER, build_queue, interleave
 
 DEFAULTS = {
@@ -49,3 +49,16 @@ def test_queue_interleaves_algorithms_and_skips_done():
     assert "reinforce_01" not in ids
     assert len(ids) == sum(EXPECTED_COUNTS.values()) - 1
     assert interleave([[1, 2, 3], [4]]) == [1, 4, 2, 3]
+
+
+def test_seed_copies_change_only_the_seed():
+    """A _s<seed> id resolves to its base experiment with only the seed changed, and the queue adds them after it."""
+    base = find_experiment("ppo_05")
+    copy = find_experiment("ppo_05_s2")
+    assert copy["exp_id"] == "ppo_05_s2"
+    assert copy["overrides"] == {**base["overrides"], "seed": 2}
+    assert changed_settings(pg_training.merge_config("ppo", base["overrides"]),
+                            pg_training.merge_config("ppo", copy["overrides"])) == ["seed"]
+    queue = build_queue(["dqn", "ppo"], ["dqn_03", "ppo_05"], {"dqn_03", "ppo_05"}, seeds=3)
+    assert [job["exp_id"] for job in queue] == ["dqn_03_s1", "ppo_05_s1", "dqn_03_s2", "ppo_05_s2"]
+    assert find_experiment("ppo_99_s1") is None

@@ -1,4 +1,7 @@
 """The hyperparameter sweeps: each experiment changes exactly one setting from its algorithm's default config."""
+import re
+
+SEED_COPY = re.compile(r"^(?P<base>.+)_s(?P<seed>\d+)$")
 
 DQN_EXPERIMENTS = [
     {"exp_id": "dqn_01", "description": "baseline, default config", "overrides": {}},
@@ -79,13 +82,30 @@ EXPERIMENTS = {
 
 
 def find_experiment(exp_id, algo=None):
-    """Return the sweep entry with this exp_id, from one algorithm's list or from any, or None for an ad hoc run."""
+    """Return the sweep entry with this exp_id, from one algorithm's list or from any, or None for an ad hoc run.
+
+    An id such as ppo_03_s1 is a seed copy: the same entry as ppo_03 with only the seed changed to 1.
+    """
     lists = [EXPERIMENTS[algo]] if algo else EXPERIMENTS.values()
     for experiments in lists:
         for experiment in experiments:
             if experiment["exp_id"] == exp_id:
                 return experiment
+    match = SEED_COPY.match(exp_id)
+    if match:
+        base = find_experiment(match.group("base"), algo)
+        if base:
+            return seed_copy(base, int(match.group("seed")))
     return None
+
+
+def seed_copy(experiment, seed):
+    """Return a copy of a sweep entry that differs only in its seed, with the id suffixed _s<seed>."""
+    return {
+        "exp_id": f"{experiment['exp_id']}_s{seed}",
+        "description": f"{experiment['description']}, seed {seed}",
+        "overrides": {**experiment["overrides"], "seed": seed},
+    }
 
 
 def select_experiments(algo, only=None):

@@ -3,6 +3,7 @@
 Full sweep:  uv run python -m training.run_sweeps --workers 3
 Subset:      uv run python -m training.run_sweeps --algo ppo,a2c --only ppo_03,a2c_06
 Dry run:     uv run python -m training.run_sweeps --only reinforce_10,dqn_15 --total-frames 3000
+More seeds:  uv run python -m training.run_sweeps --only dqn_03,ppo_05 --seeds 3
 
 Each experiment runs in its own subprocess, so a crash only fails that experiment. Each worker
 writes its summary row to its own file in logs/sweep/summary_parts/, and only this parent
@@ -15,7 +16,7 @@ import time
 from pathlib import Path
 
 from training.common import append_row, finished_exp_ids, read_rows
-from training.experiments import EXPERIMENTS, find_experiment
+from training.experiments import EXPERIMENTS, find_experiment, seed_copy
 
 ALGO_ORDER = ("dqn", "reinforce", "a2c", "ppo")
 TRAINING_MODULES = {
@@ -64,13 +65,23 @@ def interleave(lists):
     return queue
 
 
-def build_queue(algos, only, done):
-    """Return the jobs to run: the chosen experiments interleaved across algorithms, minus finished ones."""
+def build_queue(algos, only, done, seeds=1):
+    """Return the jobs to run: the chosen experiments interleaved across algorithms, minus finished ones.
+
+    With seeds above 1, each chosen experiment also gets copies with seeds 1 to seeds - 1, named
+    <exp_id>_s<seed>; the original seed 0 run counts as the first seed.
+    """
     per_algo = []
     for algo in algos:
-        jobs = [{"algo": algo, **experiment} for experiment in EXPERIMENTS[algo]]
-        per_algo.append([job for job in jobs if (only is None or job["exp_id"] in only) and job["exp_id"] not in done])
+        chosen = [experiment for experiment in EXPERIMENTS[algo] if only is None or experiment["exp_id"] in only]
+        experiments = [copy for experiment in chosen for copy in with_seed_copies(experiment, seeds)]
+        per_algo.append([{"algo": algo, **experiment} for experiment in experiments if experiment["exp_id"] not in done])
     return interleave(per_algo)
+
+
+def with_seed_copies(experiment, seeds):
+    """Return an experiment followed by its seed copies for seeds 1 to seeds - 1."""
+    return [experiment] + [seed_copy(experiment, seed) for seed in range(1, seeds)]
 
 
 def worker_command(job, total_frames):
@@ -189,6 +200,8 @@ def parse_args():
     parser.add_argument("--algo", help="comma separated algorithms to include, default all four")
     parser.add_argument("--only", help="comma separated experiment ids to include")
     parser.add_argument("--total-frames", type=int, help="override total frames for every experiment, for dry runs")
+    parser.add_argument("--seeds", type=int, default=1,
+                        help="seeds per experiment: 3 adds copies with seed 1 and 2 named <exp_id>_s1 and _s2")
     return parser.parse_args()
 
 
@@ -203,9 +216,9 @@ def main():
     PARTS_DIR.mkdir(parents=True, exist_ok=True)
     merge_leftover_parts()
     done = finished_exp_ids(log_dir=LOG_DIR)
-    queue = build_queue(algos, only, done)
-    skipped = [exp_id for exp_id in done
-               if any(find_experiment(exp_id, algo) for algo in algos) and (only is None or exp_id in only)]
+    queue = build_queue(algos, only, done, args.seeds)
+    skipped = [exp_id for exp_id in done if any(find_experiment(exp_id, algo) for algo in algos)
+               and (only is None or exp_id in only or exp_id.rsplit("_s", 1)[0] in only)]
     print(f"{len(queue)} experiments queued, {len(skipped)} already in {SUMMARY_PATH}, {args.workers} workers")
     start = time.time()
     failures = run_queue(queue, args.workers, args.total_frames)

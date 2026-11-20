@@ -14,6 +14,7 @@ SMOKE_OVERRIDES = {"total_frames": 1000, "init_random_frames": 200, "eval_every_
 SMOKE_VAL_SEEDS = range(500, 502)
 SMOKE_TEST_SEEDS = range(1000, 1002)
 SAMPLE_STEPS = 90
+ENTROPY_MAX = 2.5650
 EXPECTED_SUMMARY_COLUMNS = (
     "val_best_return",
     "test_final_return_mean",
@@ -137,3 +138,14 @@ def test_a2c_runs_with_gae_lambda_zero(tmp_path):
                                         model_dir=tmp_path / "models", val_seeds=SMOKE_VAL_SEEDS,
                                         test_seeds=SMOKE_TEST_SEEDS)
     assert result["paths"]["final"].exists()
+
+
+def test_a2c_runs_with_entropy_coef_zero(tmp_path):
+    """A2C with entropy_coef 0, sweep entry a2c_07, trains without crashing and still logs a real entropy."""
+    overrides = {**PG_SMOKE_OVERRIDES, "entropy_coef": 0.0}
+    result = pg_training.run_experiment("a2c", "a2c_entropy0", overrides, log_dir=tmp_path / "logs",
+                                        model_dir=tmp_path / "models", val_seeds=SMOKE_VAL_SEEDS,
+                                        test_seeds=SMOKE_TEST_SEEDS)
+    rows, _ = read_rows(result["paths"]["train"])
+    entropies = [float(row["entropy"]) for row in rows if row["entropy"]]
+    assert entropies and all(0 < value <= ENTROPY_MAX for value in entropies)
